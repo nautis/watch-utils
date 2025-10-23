@@ -1,6 +1,7 @@
 <?php
 /**
  * Admin Settings Page
+ * Native PHP Implementation - No Flask backend required
  */
 
 // Exit if accessed directly
@@ -23,149 +24,6 @@ function fwd_add_admin_menu() {
 add_action('admin_menu', 'fwd_add_admin_menu');
 
 /**
- * Register settings
- */
-function fwd_register_settings() {
-    register_setting('fwd_settings_group', 'fwd_settings', 'fwd_validate_settings');
-
-    add_settings_section(
-        'fwd_api_section',
-        'Flask API Configuration',
-        'fwd_api_section_callback',
-        'film-watch-database'
-    );
-
-    add_settings_field(
-        'api_url',
-        'API URL',
-        'fwd_api_url_callback',
-        'film-watch-database',
-        'fwd_api_section'
-    );
-
-    add_settings_section(
-        'fwd_cache_section',
-        'Cache Settings',
-        'fwd_cache_section_callback',
-        'film-watch-database'
-    );
-
-    add_settings_field(
-        'cache_enabled',
-        'Enable Cache',
-        'fwd_cache_enabled_callback',
-        'film-watch-database',
-        'fwd_cache_section'
-    );
-
-    add_settings_field(
-        'cache_duration',
-        'Cache Duration (seconds)',
-        'fwd_cache_duration_callback',
-        'film-watch-database',
-        'fwd_cache_section'
-    );
-}
-add_action('admin_init', 'fwd_register_settings');
-
-/**
- * API section description
- */
-function fwd_api_section_callback() {
-    echo '<p>Configure the connection to your Flask backend API.</p>';
-}
-
-/**
- * Cache section description
- */
-function fwd_cache_section_callback() {
-    echo '<p>Control how long API responses are cached to improve performance.</p>';
-}
-
-/**
- * API URL field
- */
-function fwd_api_url_callback() {
-    $settings = fwd_get_settings();
-    ?>
-    <input
-        type="url"
-        name="fwd_settings[api_url]"
-        value="<?php echo esc_attr($settings['api_url']); ?>"
-        class="regular-text"
-        placeholder="http://127.0.0.1:5000"
-    >
-    <p class="description">
-        The URL of your Flask backend API (e.g., http://127.0.0.1:5000 or https://api.example.com)
-    </p>
-    <?php
-}
-
-/**
- * Cache enabled field
- */
-function fwd_cache_enabled_callback() {
-    $settings = fwd_get_settings();
-    ?>
-    <label>
-        <input
-            type="checkbox"
-            name="fwd_settings[cache_enabled]"
-            value="1"
-            <?php checked($settings['cache_enabled'], true); ?>
-        >
-        Enable caching of API responses
-    </label>
-    <p class="description">
-        Recommended for better performance. Disable for development/testing.
-    </p>
-    <?php
-}
-
-/**
- * Cache duration field
- */
-function fwd_cache_duration_callback() {
-    $settings = fwd_get_settings();
-    ?>
-    <input
-        type="number"
-        name="fwd_settings[cache_duration]"
-        value="<?php echo esc_attr($settings['cache_duration']); ?>"
-        min="0"
-        step="60"
-        class="small-text"
-    >
-    <p class="description">
-        How long to cache API responses (in seconds). Default: 300 (5 minutes)
-    </p>
-    <?php
-}
-
-/**
- * Validate settings
- */
-function fwd_validate_settings($input) {
-    $validated = array();
-
-    // Validate API URL
-    if (isset($input['api_url'])) {
-        $url = esc_url_raw($input['api_url']);
-        $validated['api_url'] = rtrim($url, '/');
-    }
-
-    // Validate cache enabled
-    $validated['cache_enabled'] = isset($input['cache_enabled']) && $input['cache_enabled'] === '1';
-
-    // Validate cache duration
-    if (isset($input['cache_duration'])) {
-        $validated['cache_duration'] = absint($input['cache_duration']);
-    }
-
-    return $validated;
-}
-
-/**
  * Settings page HTML
  */
 function fwd_settings_page() {
@@ -173,31 +31,60 @@ function fwd_settings_page() {
         wp_die('You do not have sufficient permissions to access this page.');
     }
 
-    // Check backend status
-    $backend_online = fwd_check_backend_status();
+    // Get database stats
+    $stats = fwd_get_stats();
+    $db_path = fwd_db()->get_db_path();
+    $db_exists = file_exists($db_path);
+    $db_size = $db_exists ? size_format(filesize($db_path), 2) : 'N/A';
 
     ?>
     <div class="wrap">
         <h1>Film Watch Database Settings</h1>
 
-        <div class="fwd-admin-status" style="margin: 20px 0; padding: 15px; border-left: 4px solid <?php echo $backend_online ? '#46b450' : '#dc3232'; ?>; background: <?php echo $backend_online ? '#ecf7ed' : '#f9e2e2'; ?>;">
-            <strong>Backend Status:</strong>
-            <?php if ($backend_online): ?>
-                <span style="color: #46b450;">✓ Connected</span>
-                <p style="margin: 10px 0 0 0;">Your Flask backend is running and accessible.</p>
-            <?php else: ?>
-                <span style="color: #dc3232;">✗ Offline</span>
-                <p style="margin: 10px 0 0 0;">Cannot connect to Flask backend. Please ensure flask_backend.py is running.</p>
-            <?php endif; ?>
+        <div class="fwd-admin-status" style="margin: 20px 0; padding: 15px; border-left: 4px solid #46b450; background: #ecf7ed;">
+            <strong>Status:</strong>
+            <span style="color: #46b450;">✓ WordPress-Native PHP Backend</span>
+            <p style="margin: 10px 0 0 0;">
+                No external Flask server required! The database runs natively in WordPress using PHP and SQLite.
+            </p>
         </div>
 
-        <form method="post" action="options.php">
-            <?php
-            settings_fields('fwd_settings_group');
-            do_settings_sections('film-watch-database');
-            submit_button();
-            ?>
-        </form>
+        <h2>Database Information</h2>
+        <table class="form-table">
+            <tr>
+                <th scope="row">Database Location</th>
+                <td>
+                    <code><?php echo esc_html($db_path); ?></code>
+                    <?php if ($db_exists): ?>
+                        <span style="color: #46b450;">✓ Database file exists</span>
+                    <?php else: ?>
+                        <span style="color: #dc3232;">✗ Database file not found</span>
+                    <?php endif; ?>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Database Size</th>
+                <td><?php echo esc_html($db_size); ?></td>
+            </tr>
+            <?php if (isset($stats['stats'])): ?>
+            <tr>
+                <th scope="row">Total Films</th>
+                <td><?php echo esc_html($stats['stats']['films']); ?></td>
+            </tr>
+            <tr>
+                <th scope="row">Total Actors</th>
+                <td><?php echo esc_html($stats['stats']['actors']); ?></td>
+            </tr>
+            <tr>
+                <th scope="row">Total Brands</th>
+                <td><?php echo esc_html($stats['stats']['brands']); ?></td>
+            </tr>
+            <tr>
+                <th scope="row">Total Entries</th>
+                <td><?php echo esc_html($stats['stats']['entries']); ?></td>
+            </tr>
+            <?php endif; ?>
+        </table>
 
         <hr>
 
@@ -252,60 +139,69 @@ function fwd_settings_page() {
 
         <hr>
 
-        <h2>Tools</h2>
+        <h2>Import Existing Database</h2>
         <div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #2271b1;">
-            <h3>Clear Cache</h3>
-            <p>Clear all cached API responses.</p>
-            <button type="button" class="button" onclick="fwdClearCache()">Clear Cache</button>
-            <div id="fwd-cache-result" style="margin-top: 10px;"></div>
+            <p>If you have an existing <code>film_watches.db</code> from your Flask application, you can import it:</p>
+            <ol>
+                <li>Copy your existing database file to: <code><?php echo esc_html(dirname($db_path)); ?>/</code></li>
+                <li>Rename it to: <code>film_watches.db</code></li>
+                <li>Refresh this page to see updated statistics</li>
+            </ol>
+            <p><strong>Note:</strong> The plugin will automatically create a new empty database if none exists.</p>
+        </div>
+
+        <hr>
+
+        <h2>System Requirements</h2>
+        <div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #2271b1;">
+            <table class="form-table">
+                <tr>
+                    <th scope="row">PHP Version</th>
+                    <td>
+                        <?php echo PHP_VERSION; ?>
+                        <?php if (version_compare(PHP_VERSION, '7.4', '>=')): ?>
+                            <span style="color: #46b450;">✓ Compatible</span>
+                        <?php else: ?>
+                            <span style="color: #dc3232;">✗ Requires PHP 7.4+</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">PDO Extension</th>
+                    <td>
+                        <?php if (extension_loaded('pdo')): ?>
+                            <span style="color: #46b450;">✓ Enabled</span>
+                        <?php else: ?>
+                            <span style="color: #dc3232;">✗ Required</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">PDO SQLite Driver</th>
+                    <td>
+                        <?php if (extension_loaded('pdo_sqlite')): ?>
+                            <span style="color: #46b450;">✓ Enabled</span>
+                        <?php else: ?>
+                            <span style="color: #dc3232;">✗ Required</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Uploads Directory Writable</th>
+                    <td>
+                        <?php
+                        $upload_dir = wp_upload_dir();
+                        $is_writable = is_writable($upload_dir['basedir']);
+                        ?>
+                        <?php if ($is_writable): ?>
+                            <span style="color: #46b450;">✓ Writable</span>
+                        <?php else: ?>
+                            <span style="color: #dc3232;">✗ Not writable</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            </table>
         </div>
     </div>
-
-    <script>
-    function fwdClearCache() {
-        const resultDiv = document.getElementById('fwd-cache-result');
-        resultDiv.innerHTML = '<em>Clearing cache...</em>';
-
-        fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                action: 'fwd_clear_cache',
-                nonce: '<?php echo wp_create_nonce('fwd_clear_cache'); ?>'
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                resultDiv.innerHTML = '<span style="color: #46b450;">✓ Cache cleared successfully!</span>';
-            } else {
-                resultDiv.innerHTML = '<span style="color: #dc3232;">✗ Error clearing cache</span>';
-            }
-        })
-        .catch(error => {
-            resultDiv.innerHTML = '<span style="color: #dc3232;">✗ Network error</span>';
-        });
-    }
-    </script>
     <?php
 }
-
-/**
- * AJAX handler to clear cache
- */
-function fwd_ajax_clear_cache() {
-    check_ajax_referer('fwd_clear_cache', 'nonce');
-
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(array('message' => 'Unauthorized'));
-    }
-
-    global $wpdb;
-    $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_fwd_%'");
-    $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_fwd_%'");
-
-    wp_send_json_success(array('message' => 'Cache cleared'));
-}
-add_action('wp_ajax_fwd_clear_cache', 'fwd_ajax_clear_cache');

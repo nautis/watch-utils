@@ -1,6 +1,7 @@
 <?php
 /**
- * API Functions - Handle communication with Flask backend
+ * API Functions - Native PHP Database Implementation
+ * No external Flask backend required - all logic runs in WordPress
  */
 
 // Exit if accessed directly
@@ -9,125 +10,58 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Get plugin settings
- */
-function fwd_get_settings() {
-    $defaults = array(
-        'api_url' => 'http://127.0.0.1:5000',
-        'cache_enabled' => true,
-        'cache_duration' => 300,
-    );
-
-    $settings = get_option('fwd_settings', $defaults);
-    return wp_parse_args($settings, $defaults);
-}
-
-/**
- * Make API request to Flask backend
- */
-function fwd_api_request($endpoint, $method = 'GET', $data = null) {
-    $settings = fwd_get_settings();
-    $api_url = rtrim($settings['api_url'], '/');
-    $url = $api_url . '/' . ltrim($endpoint, '/');
-
-    // Check cache first for GET requests
-    if ($method === 'GET' && $settings['cache_enabled']) {
-        $cache_key = 'fwd_' . md5($url);
-        $cached = get_transient($cache_key);
-        if ($cached !== false) {
-            return $cached;
-        }
-    }
-
-    // Prepare request arguments
-    $args = array(
-        'timeout' => 15,
-        'method' => $method,
-        'headers' => array(
-            'Content-Type' => 'application/json',
-        ),
-    );
-
-    if ($data !== null && $method === 'POST') {
-        $args['body'] = json_encode($data);
-    }
-
-    // Make the request
-    $response = wp_remote_request($url, $args);
-
-    // Check for errors
-    if (is_wp_error($response)) {
-        return array(
-            'success' => false,
-            'error' => $response->get_error_message()
-        );
-    }
-
-    $status_code = wp_remote_retrieve_response_code($response);
-    $body = wp_remote_retrieve_body($response);
-    $result = json_decode($body, true);
-
-    if ($status_code !== 200) {
-        return array(
-            'success' => false,
-            'error' => isset($result['error']) ? $result['error'] : 'API request failed'
-        );
-    }
-
-    // Cache successful GET requests
-    if ($method === 'GET' && $settings['cache_enabled'] && isset($result)) {
-        set_transient($cache_key, $result, $settings['cache_duration']);
-    }
-
-    return $result;
-}
-
-/**
- * Check if Flask backend is online
- */
-function fwd_check_backend_status() {
-    $result = fwd_api_request('/');
-    return isset($result['status']) && $result['status'] === 'running';
-}
-
-/**
  * Get database statistics
  */
 function fwd_get_stats() {
-    return fwd_api_request('/api/stats');
+    return fwd_db()->get_stats();
 }
 
 /**
  * Query by actor name
  */
 function fwd_query_actor($actor_name) {
-    return fwd_api_request('/api/query/actor/' . urlencode($actor_name));
+    return fwd_db()->query_actor($actor_name);
 }
 
 /**
  * Query by brand name
  */
 function fwd_query_brand($brand_name) {
-    return fwd_api_request('/api/query/brand/' . urlencode($brand_name));
+    return fwd_db()->query_brand($brand_name);
 }
 
 /**
  * Query by film title
  */
 function fwd_query_film($film_title) {
-    return fwd_api_request('/api/query/film/' . urlencode($film_title));
+    return fwd_db()->query_film($film_title);
 }
 
 /**
  * Add new entry to database
  */
 function fwd_add_entry($entry_text, $narrative = '') {
-    $data = array(
-        'entry' => $entry_text,
-        'narrative' => $narrative ? $narrative : 'Watch worn in film.'
-    );
+    try {
+        $db = fwd_db();
+        $parsed = $db->parse_entry($entry_text);
 
-    return fwd_api_request('/api/add', 'POST', $data);
+        if ($narrative) {
+            $parsed['narrative'] = $narrative;
+        }
+
+        $db->insert_entry($parsed);
+
+        return array(
+            'success' => true,
+            'message' => "Successfully added: {$parsed['actor']} wearing {$parsed['brand']} {$parsed['model']} in {$parsed['title']} ({$parsed['year']})",
+            'data' => $parsed
+        );
+    } catch (Exception $e) {
+        return array(
+            'success' => false,
+            'error' => $e->getMessage()
+        );
+    }
 }
 
 /**
@@ -187,10 +121,6 @@ function fwd_ajax_add_entry() {
     $result = fwd_add_entry($entry_text, $narrative);
 
     if (isset($result['success']) && $result['success']) {
-        // Clear cache when adding new entry
-        global $wpdb;
-        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_fwd_%'");
-
         wp_send_json_success($result);
     } else {
         wp_send_json_error($result);

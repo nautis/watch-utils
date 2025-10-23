@@ -1,14 +1,16 @@
 # Film Watch Database - WordPress Plugin
 
-A WordPress plugin that integrates your Film Watch Database Flask API with WordPress. Search movies, actors, and watch brands directly from your WordPress site.
+A **100% WordPress-native plugin** for managing and displaying a searchable database of watches worn by actors in films. No external servers or dependencies required!
 
 ## Features
 
+- **Pure PHP/WordPress**: All Python logic converted to native PHP - no Flask backend needed
+- **SQLite Database**: Lightweight, file-based database stored in WordPress uploads directory
 - **Search Functionality**: Search by actor, watch brand, or film title
 - **Database Statistics**: Display film and watch statistics
 - **Multiple Shortcodes**: Easy integration into any page or post
-- **Admin Panel**: Configure Flask API connection and manage settings
-- **Caching System**: Improve performance with built-in API response caching
+- **Natural Language Parsing**: Add entries using plain English (e.g., "Tom Cruise wears Rolex in Top Gun")
+- **Admin Panel**: Manage database and view statistics
 - **Responsive Design**: Mobile-friendly interface
 - **AJAX-Powered**: Smooth, no-refresh search experience
 
@@ -16,14 +18,13 @@ A WordPress plugin that integrates your Film Watch Database Flask API with WordP
 
 - WordPress 5.0 or higher
 - PHP 7.4 or higher
-- Flask backend running (flask_backend.py)
-- cURL extension enabled in PHP
+- PDO extension with SQLite driver (standard in most PHP installations)
+- Writable uploads directory
 
 ## Installation
 
-### 1. Install the Plugin
+### Method 1: Manual Installation
 
-**Option A: Manual Installation**
 1. Download or clone this repository
 2. Copy the `film-watch-database` folder to your WordPress plugins directory:
    ```
@@ -32,30 +33,28 @@ A WordPress plugin that integrates your Film Watch Database Flask API with WordP
 3. Go to WordPress Admin → Plugins
 4. Activate "Film Watch Database"
 
-**Option B: ZIP Installation**
+### Method 2: ZIP Installation
+
 1. Zip the `film-watch-database` folder
 2. Go to WordPress Admin → Plugins → Add New → Upload Plugin
 3. Upload the ZIP file and click "Install Now"
 4. Activate the plugin
 
-### 2. Configure the Plugin
-
-1. Go to **Settings → Film Watch DB**
-2. Enter your Flask API URL (e.g., `http://127.0.0.1:5000` for local or `https://api.yourdomain.com` for remote)
-3. Configure cache settings (optional)
-4. Click "Save Changes"
-5. Check the "Backend Status" indicator to ensure connection is successful
-
-### 3. Start Your Flask Backend
-
-Make sure your Flask backend is running:
+### Method 3: Direct from GitHub
 
 ```bash
-cd /path/to/watch-utils
-python flask_backend.py
+cd /var/www/html/wp-content/plugins/
+git clone https://github.com/nautis/watch-utils.git temp
+mv temp/wordpress-plugin/film-watch-database ./
+rm -rf temp
 ```
 
-The backend should be accessible at the URL you configured in step 2.
+## Quick Start
+
+1. **Activate the plugin** in WordPress Admin → Plugins
+2. Go to **Settings → Film Watch DB** to verify setup
+3. Add a shortcode to any page: `[film_watch_search]`
+4. Start adding entries using the `[film_watch_add]` shortcode (admin only)
 
 ## Usage
 
@@ -138,188 +137,134 @@ Display a form to add new entries to the database:
 [film_watch_add]
 ```
 
-This shortcode is only visible to users with "manage_options" capability (administrators).
+This shortcode is only visible to administrators. Use natural language to add entries:
 
-## Deployment Options
+**Examples:**
+- "Tom Cruise wears Breitling Navitimer in Top Gun: Maverick (2022)"
+- "Daniel Craig wears Omega Seamaster in Casino Royale (2006)"
+- "In Interstellar (2014), Matthew McConaughey as Cooper wears Hamilton Khaki Pilot"
 
-### Option 1: WordPress and Flask on Same Server
+## Importing Existing Data
 
-If both WordPress and Flask are on the same server:
+If you have an existing `film_watches.db` from the Flask backend:
 
-1. Run Flask backend:
-   ```bash
-   python flask_backend.py
-   ```
+1. Go to **Settings → Film Watch DB** to find your database path
+2. Copy your existing database to that location
+3. Refresh the settings page to see your data
 
-2. Configure plugin to use `http://127.0.0.1:5000`
+Typical database location: `/wp-content/uploads/film-watch-database/film_watches.db`
 
-### Option 2: WordPress and Flask on Different Servers
+## Database Schema
 
-If Flask is hosted separately:
+The plugin creates 6 tables:
 
-1. Deploy Flask to your server (DigitalOcean, AWS, etc.)
-2. Use a production WSGI server like Gunicorn:
-   ```bash
-   pip install gunicorn
-   gunicorn -w 4 -b 0.0.0.0:5000 flask_backend:app
-   ```
+- **films**: Film titles and years
+- **actors**: Actor names
+- **characters**: Character names
+- **brands**: Watch brand names
+- **watches**: Watch models and references
+- **film_actor_watch**: Relationships between films, actors, and watches
 
-3. Set up Nginx reverse proxy (recommended)
-4. Configure plugin to use your Flask API URL (e.g., `https://api.yourdomain.com`)
+## Technical Details
 
-### Option 3: Docker Deployment
+### Why WordPress-Native?
 
-Create a `Dockerfile` for your Flask backend:
+This plugin was converted from a Flask (Python) backend to pure PHP for several reasons:
 
-```dockerfile
-FROM python:3.9-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "flask_backend:app"]
-```
+✅ **No External Dependencies**: Everything runs in WordPress
+✅ **Simpler Deployment**: Install like any WordPress plugin
+✅ **Better Performance**: No HTTP API calls needed
+✅ **Easier Maintenance**: One codebase, one language
+✅ **Lower Server Requirements**: No Python runtime needed
 
-Run with Docker:
-```bash
-docker build -t film-watch-api .
-docker run -d -p 5000:5000 film-watch-api
-```
+### Natural Language Parsing
 
-## Configuration on Ubuntu 24.04 Server
+The plugin uses regex patterns to parse natural language entries:
 
-Your DigitalOcean server setup:
+- "Actor wears Brand Model in Year Film"
+- "Actor wears Brand Model in Film (Year)"
+- "In Film (Year), Actor as Character wears Brand Model"
 
-### 1. Install Dependencies
+### Database Storage
 
-```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
+- Uses SQLite for lightweight, file-based storage
+- Database stored in WordPress uploads directory
+- Automatic table creation on plugin activation
+- Supports import of existing databases
 
-# Install Python and pip
-sudo apt install python3 python3-pip python3-venv -y
+## Configuration on Ubuntu 24.04
 
-# Install Nginx (optional, for production)
-sudo apt install nginx -y
-```
+Your server should already have everything needed:
 
-### 2. Set Up Flask Backend
+### 1. Check PHP Version
 
 ```bash
-# Navigate to your project
-cd /home/user/watch-utils
-
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install flask flask-cors gunicorn
+php -v
 ```
 
-### 3. Run Flask Backend
+Should show PHP 7.4 or higher (Ubuntu 24.04 has PHP 8.3 by default).
 
-**Development:**
+### 2. Verify SQLite Support
+
 ```bash
-python flask_backend.py
+php -m | grep -i pdo
+php -m | grep -i sqlite
 ```
 
-**Production (with Gunicorn):**
+Should show `PDO` and `pdo_sqlite`.
+
+### 3. Check Permissions
+
 ```bash
-gunicorn -w 2 -b 127.0.0.1:5000 flask_backend:app
-```
-
-**Production (as systemd service):**
-
-Create `/etc/systemd/system/film-watch-api.service`:
-
-```ini
-[Unit]
-Description=Film Watch Database API
-After=network.target
-
-[Service]
-User=www-data
-WorkingDirectory=/home/user/watch-utils
-Environment="PATH=/home/user/watch-utils/venv/bin"
-ExecStart=/home/user/watch-utils/venv/bin/gunicorn -w 2 -b 127.0.0.1:5000 flask_backend:app
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start:
-```bash
-sudo systemctl enable film-watch-api
-sudo systemctl start film-watch-api
-sudo systemctl status film-watch-api
-```
-
-### 4. Configure Nginx (Optional)
-
-Create `/etc/nginx/sites-available/film-watch-api`:
-
-```nginx
-server {
-    listen 80;
-    server_name api.yourdomain.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-
-Enable site:
-```bash
-sudo ln -s /etc/nginx/sites-available/film-watch-api /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
+# WordPress uploads directory should be writable
+ls -la /var/www/html/wp-content/uploads/
 ```
 
 ## Troubleshooting
 
-### Backend Status Shows "Offline"
+### Database Not Created
 
-1. Check if Flask backend is running:
-   ```bash
-   curl http://127.0.0.1:5000
-   ```
-
-2. Check Flask logs for errors
-
-3. Verify API URL in plugin settings matches your Flask backend URL
-
-4. Check firewall settings if Flask is on a different server
+1. Go to **Settings → Film Watch DB**
+2. Check "System Requirements" section
+3. Ensure PDO SQLite driver is enabled
+4. Verify uploads directory is writable
 
 ### Search Returns No Results
 
-1. Verify database has data
-2. Check Flask API responses manually:
-   ```bash
-   curl http://127.0.0.1:5000/api/query/actor/Tom%20Cruise
-   ```
+1. Verify database has data (check stats in admin)
+2. Try adding a test entry using `[film_watch_add]`
+3. Check browser console for JavaScript errors
 
-3. Clear plugin cache (Settings → Film Watch DB → Tools → Clear Cache)
+### Permission Errors
 
-### Permission Denied Errors
+Ensure WordPress uploads directory is writable:
 
-1. Check file permissions:
-   ```bash
-   chmod 644 film_watches.db
-   ```
+```bash
+sudo chown -R www-data:www-data /var/www/html/wp-content/uploads/
+sudo chmod -R 755 /var/www/html/wp-content/uploads/
+```
 
-2. Ensure PHP user (www-data) can read database files
+### PHP Extension Missing
 
-## Security Recommendations
+If PDO SQLite is not available:
 
-1. **Use HTTPS**: Always use HTTPS for production API endpoints
-2. **Firewall**: Restrict Flask backend access if on same server
-3. **Authentication**: Consider adding API key authentication to Flask
-4. **Rate Limiting**: Implement rate limiting on Flask backend
-5. **CORS**: Configure CORS properly in Flask for production
+```bash
+# Ubuntu/Debian
+sudo apt-get install php-sqlite3
+sudo systemctl restart apache2   # or nginx/php-fpm
+```
+
+## Advantages Over Flask Backend
+
+| Feature | Flask Backend | WordPress-Native |
+|---------|---------------|------------------|
+| Installation | Complex (Python + WSGI) | Simple (WordPress plugin) |
+| Dependencies | Flask, Python, Gunicorn | None (built-in PHP) |
+| Server Requirements | 2 services (WP + Flask) | 1 service (WordPress) |
+| Configuration | API URLs, CORS, ports | None |
+| Deployment | systemd, Nginx proxy | Upload plugin |
+| Maintenance | Update both systems | Update plugin only |
+| Performance | HTTP API calls | Direct database access |
 
 ## Support
 
@@ -333,11 +278,24 @@ GPL v2 or later
 
 ## Changelog
 
+### 2.0.0
+- **MAJOR UPDATE**: Converted to WordPress-native PHP implementation
+- Removed Flask backend dependency
+- Pure PHP natural language parsing
+- Direct SQLite database access via PDO
+- Simpler installation and deployment
+- Better performance (no HTTP API calls)
+- Import existing Flask database files
+- System requirements checker in admin
+
 ### 1.0.0
-- Initial release
+- Initial release with Flask backend integration
 - Search by actor, brand, and film
 - Database statistics display
 - Admin settings panel
-- Caching system
 - Multiple shortcodes
 - AJAX-powered interface
+
+## Credits
+
+Converted from Flask/Python backend to WordPress-native PHP implementation for simplified deployment and better WordPress integration.

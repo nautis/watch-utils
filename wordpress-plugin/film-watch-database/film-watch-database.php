@@ -56,6 +56,7 @@ class Film_Watch_Database {
      * Load required files
      */
     private function load_dependencies() {
+        require_once FWD_PLUGIN_DIR . 'includes/database.php';
         require_once FWD_PLUGIN_DIR . 'includes/api-functions.php';
         require_once FWD_PLUGIN_DIR . 'includes/shortcodes.php';
 
@@ -85,16 +86,9 @@ class Film_Watch_Database {
      * Plugin activation
      */
     public function activate() {
-        // Set default options
-        $default_options = array(
-            'api_url' => 'http://127.0.0.1:5000',
-            'cache_enabled' => true,
-            'cache_duration' => 300, // 5 minutes
-        );
-
-        if (!get_option('fwd_settings')) {
-            add_option('fwd_settings', $default_options);
-        }
+        // Initialize database tables
+        // Database will be created automatically on first instantiation
+        fwd_db();
 
         // Flush rewrite rules
         flush_rewrite_rules();
