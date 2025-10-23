@@ -28,14 +28,24 @@ class FWD_Database {
             wp_mkdir_p($db_dir);
         }
 
-        $this->connect();
-        $this->create_tables();
+        if ($this->connect()) {
+            $this->create_tables();
+        }
     }
 
     /**
      * Connect to SQLite database
      */
     private function connect() {
+        // Check if PDO SQLite driver is available
+        if (!extension_loaded('pdo_sqlite')) {
+            error_log('FWD Database Error: PDO SQLite extension is not installed');
+            add_action('admin_notices', function() {
+                echo '<div class="notice notice-error"><p><strong>Film Watch Database Error:</strong> The PDO SQLite extension is not installed. Please run: <code>sudo apt-get install php-sqlite3</code> and restart your web server.</p></div>';
+            });
+            return false;
+        }
+
         try {
             $this->db = new PDO('sqlite:' . $this->db_path);
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -43,15 +53,28 @@ class FWD_Database {
             $this->db->exec('PRAGMA foreign_keys = ON');
         } catch (PDOException $e) {
             error_log('FWD Database Connection Error: ' . $e->getMessage());
+            add_action('admin_notices', function() use ($e) {
+                echo '<div class="notice notice-error"><p><strong>Film Watch Database Error:</strong> ' . esc_html($e->getMessage()) . '</p></div>';
+            });
             return false;
         }
         return true;
     }
 
     /**
+     * Check if database is connected
+     */
+    private function is_connected() {
+        return $this->db !== null;
+    }
+
+    /**
      * Create database tables if they don't exist
      */
     private function create_tables() {
+        if (!$this->is_connected()) {
+            return false;
+        }
         $schema = "
         CREATE TABLE IF NOT EXISTS films (
             film_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -234,6 +257,10 @@ class FWD_Database {
      * Converted from Python execute_insert() function
      */
     public function insert_entry($data) {
+        if (!$this->is_connected()) {
+            throw new Exception('Database connection failed. Please check that PDO SQLite extension is installed.');
+        }
+
         try {
             $this->db->beginTransaction();
 
@@ -314,6 +341,10 @@ class FWD_Database {
      * Query watches by actor
      */
     public function query_actor($actor_name) {
+        if (!$this->is_connected()) {
+            return array('success' => false, 'error' => 'Database not connected', 'count' => 0, 'films' => array());
+        }
+
         $stmt = $this->db->prepare("
             SELECT f.title, f.year, b.brand_name, w.model_reference,
                    c.character_name, faw.narrative_role
@@ -354,6 +385,10 @@ class FWD_Database {
      * Query films by brand
      */
     public function query_brand($brand_name) {
+        if (!$this->is_connected()) {
+            return array('success' => false, 'error' => 'Database not connected', 'count' => 0, 'films' => array());
+        }
+
         $stmt = $this->db->prepare("
             SELECT f.title, f.year, a.actor_name, w.model_reference,
                    c.character_name, faw.narrative_role
@@ -394,6 +429,10 @@ class FWD_Database {
      * Query watches by film
      */
     public function query_film($film_title) {
+        if (!$this->is_connected()) {
+            return array('success' => false, 'error' => 'Database not connected', 'count' => 0, 'watches' => array());
+        }
+
         $stmt = $this->db->prepare("
             SELECT f.title, f.year, a.actor_name, b.brand_name,
                    w.model_reference, c.character_name, faw.narrative_role
@@ -435,6 +474,12 @@ class FWD_Database {
      * Get database statistics
      */
     public function get_stats() {
+        if (!$this->is_connected()) {
+            return array('success' => false, 'error' => 'Database not connected', 'stats' => array(
+                'films' => 0, 'actors' => 0, 'brands' => 0, 'entries' => 0, 'top_brands' => array()
+            ));
+        }
+
         $stmt = $this->db->query("SELECT COUNT(*) FROM films");
         $film_count = $stmt->fetchColumn();
 
