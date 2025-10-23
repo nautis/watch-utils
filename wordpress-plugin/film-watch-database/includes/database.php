@@ -124,14 +124,14 @@ class FWD_Database {
         // Remove trailing periods but preserve them in abbreviations
         $text = rtrim($text, '.');
 
-        // Pattern 1: "Actor wears Brand Model in Year Film"
-        $pattern1 = '/(.+?)\s+(?:wears?|wearing)\s+(?:a|an)\s+(.+?)\s+(?:watch\s+)?in\s+(?:the\s+)?(\d{4})\s+(?:\w+\s+)?(.+?)$/i';
+        // Pattern 1: "Actor wears/wore Brand Model in Year Film"
+        $pattern1 = '/(.+?)\s+(?:wears?|wearing|wore)\s+(?:a|an\s+)?(.+?)\s+(?:watch\s+)?in\s+(?:the\s+)?(?:movie\s+)?(\d{4})\s+(?:\w+\s+)?(.+?)$/i';
 
-        // Pattern 2: "Actor wears Brand Model in Film (Year)"
-        $pattern2 = '/(.+?)\s+(?:wears?|wearing)\s+(?:a|an)\s+(.+?)\s+in\s+(.+?)\s+\((\d{4})\)$/i';
+        // Pattern 2: "Actor wears/wore Brand Model in Film (Year)"
+        $pattern2 = '/(.+?)\s+(?:wears?|wearing|wore)\s+(?:a|an\s+)?(.+?)\s+in\s+(?:the\s+)?(?:movie\s+)?(.+?)\s+\((\d{4})\)$/i';
 
-        // Pattern 3: "In Film (Year), Actor as Character wears Brand Model"
-        $pattern3 = '/In\s+(.+?)\s+\((\d{4})\),\s+(.+?)\s+(?:as|plays)\s+(.+?)\s+(?:wears?|wearing)\s+(?:a|an)\s+(.+?)$/i';
+        // Pattern 3: "In Film (Year), Actor as Character wears/wore Brand Model"
+        $pattern3 = '/In\s+(.+?)\s+\((\d{4})\),\s+(.+?)\s+(?:as|plays)\s+(.+?)\s+(?:wears?|wearing|wore)\s+(?:a|an\s+)?(.+?)$/i';
 
         $actor = null;
         $watch_full = null;

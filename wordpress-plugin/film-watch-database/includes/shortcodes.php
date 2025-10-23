@@ -262,19 +262,21 @@ function fwd_add_shortcode($atts) {
         <h3>Add New Entry</h3>
         <div class="fwd-examples">
             <strong>Examples:</strong><br>
-            • "Jakob Cedergren wears Citizen Eco-Drive Divers 200M in The Guilty (2018)"<br>
-            • "Tom Cruise wears Breitling Navitimer in Top Gun: Maverick (2022)"<br>
+            • "Jakob Cedergren wears a Citizen Eco-Drive Divers 200M in The Guilty (2018)"<br>
+            • "Tom Cruise wore a Breitling Navitimer in Top Gun: Maverick (2022)"<br>
+            • "Matthew Clapp wore Rolex Yacht-Master in the movie Pizza with Matt (2025)"<br>
             • "In Interstellar (2014), Matthew McConaughey as Cooper wears Hamilton Khaki Pilot"
         </div>
 
         <div class="fwd-form-group">
             <label for="fwd-entry-text">Entry Text:</label>
-            <input
-                type="text"
+            <textarea
                 id="fwd-entry-text"
                 class="fwd-input"
+                cols="80"
+                rows="3"
                 placeholder="Actor wears Brand Model in Film (Year)"
-            >
+            ></textarea>
         </div>
 
         <div class="fwd-form-group">
