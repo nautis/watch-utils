@@ -63,6 +63,7 @@ class Film_Watch_Database {
         // Load admin files only in admin
         if (is_admin()) {
             require_once FWD_PLUGIN_DIR . 'includes/admin-settings.php';
+            require_once FWD_PLUGIN_DIR . 'includes/migration.php';
         }
     }
 
