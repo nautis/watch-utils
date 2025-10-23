@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Film Watch Index - Data Entry</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg:#0e1117; --fg:#e6e6e6; --muted:#a7a7a7; --line:#1d2230; --card:#141925; --accent:#3b7cff; --ok:#20a560; --err:#da3d3d; }
+  html,body { margin:0; padding:0; background:var(--bg); color:var(--fg); font:14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+  header { padding:16px 20px; border-bottom:1px solid var(--line); }
+  h1 { margin:0 0 6px 0; font-size:20px; }
+  small { color:var(--muted); }
+  .wrap { display:grid; gap:16px; grid-template-columns: 2fr 1fr; padding:20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .card h2 { margin:0 0 10px 0; font-size:16px; }
+  .grid { display:grid; gap:10px; grid-template-columns: repeat(12, 1fr); }
+  .col-12 { grid-column: span 12; } .col-8 { grid-column: span 8; } .col-6 { grid-column: span 6; }
+  .col-4 { grid-column: span 4; } .col-3 { grid-column: span 3; } .col-2 { grid-column: span 2; }
+  label { display:block; margin:2px 0 4px 0; color:var(--muted); font-size:12px; }
+  input[type=text], input[type=number], input[type=url], select, textarea {
+    width:100%; padding:9px 10px; border-radius:8px; border:1px solid var(--line); background:#0b0f18; color:var(--fg);
+  }
+  textarea { min-height:80px; resize:vertical; }
+  .row { display:flex; gap:10px; align-items:center; }
+  .row > * { flex:1; }
+  .actions { display:flex; gap:10px; margin-top:10px; }
+  button {
+    appearance:none; border:1px solid var(--line); border-radius:8px; padding:10px 14px;
+    background:var(--accent); color:white; cursor:pointer; font-weight:600;
+  }
+  button.secondary { background:#1c2435; color:var(--fg); }
+  .status { margin-top:12px; padding:10px; border-radius:8px; background:#0f1420; border:1px solid var(--line); }
+  .ok { color:var(--ok); } .err { color:var(--err); }
+  table { width:100%; border-collapse:collapse; margin-top:10px; }
+  th, td { border:1px solid var(--line); padding:6px 8px; text-align:left; }
+  th { background:#101729; }
+  .help { color:var(--muted); font-size:12px; margin-top:6px; }
+  @media (max-width: 1100px) { .wrap { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Film Watch Index</h1>
+    <small>Structured data entry for films, roles, watches, and sources. Everything goes in one transaction.</small>
+  </header>
+
+  <div class="wrap">
+    <!-- Left: Data Entry -->
+    <section class="card">
+      <h2>Add a new screen-worn watch appearance</h2>
+      <form id="entryForm" class="grid" onsubmit="return false;">
+
+        <!-- Film -->
+        <div class="col-8">
+          <label for="film_title">Film title</label>
+          <input id="film_title" type="text" placeholder="Casino Royale" required>
+        </div>
+        <div class="col-2">
+          <label for="film_year">Release year</label>
+          <input id="film_year" type="number" min="1888" max="2100" placeholder="2006" required>
+        </div>
+        <div class="col-2">
+          <label for="film_country">Country (optional)</label>
+          <input id="film_country" type="text" placeholder="UK, USA">
+        </div>
+
+        <!-- Actor / Character -->
+        <div class="col-6">
+          <label for="actor_name">Actor full name</label>
+          <input id="actor_name" type="text" placeholder="Daniel Craig" required>
+        </div>
+        <div class="col-6">
+          <label for="character_name">Character name</label>
+          <input id="character_name" type="text" placeholder="James Bond" required>
+        </div>
+
+        <!-- Watch -->
+        <div class="col-4">
+          <label for="brand_name">Brand</label>
+          <input id="brand_name" type="text" placeholder="Omega" required>
+        </div>
+        <div class="col-4">
+          <label for="model_name">Model</label>
+          <input id="model_name" type="text" placeholder="Seamaster 300" required>
+        </div>
+        <div class="col-4">
+          <label for="reference">Reference (optional)</label>
+          <input id="reference" type="text" placeholder="233.30.41.21.01.001">
+        </div>
+
+        <!-- Source -->
+        <div class="col-3">
+          <label for="source_type">Source type</label>
+          <select id="source_type">
+            <option value="">(none)</option>
+            <option>manufacturer</option>
+            <option>auction</option>
+            <option>prop</option>
+            <option>publication</option>
+            <option>frame_still</option>
+            <option>other</option>
+          </select>
+        </div>
+        <div class="col-9">
+          <label for="source_title">Source title</label>
+          <input id="source_title" type="text" placeholder="Omega press release, Spectre partnership">
+        </div>
+        <div class="col-4">
+          <label for="source_publisher">Publisher</label>
+          <input id="source_publisher" type="text" placeholder="Omega">
+        </div>
+        <div class="col-5">
+          <label for="source_url">Source URL</label>
+          <input id="source_url" type="url" placeholder="https://example.com/page">
+        </div>
+        <div class="col-3">
+          <label for="source_date">Date published (optional)</label>
+          <input id="source_date" type="text" placeholder="YYYY-MM-DD">
+        </div>
+
+        <!-- Confidence + Narrative -->
+        <div class="col-2">
+          <label for="confidence">Confidence</label>
+          <select id="confidence">
+            <option>A</option>
+            <option selected>B</option>
+            <option>C</option>
+            <option>D</option>
+          </select>
+        </div>
+        <div class="col-10">
+          <label for="narrative">Narrative (optional)</label>
+          <input id="narrative" type="text" placeholder="Short note about the evidence">
+        </div>
+
+        <!-- Actions -->
+        <div class="col-12 actions">
+          <button id="btnSubmit">Save entry</button>
+          <button id="btnClear" class="secondary" type="button">Clear</button>
+          <button id="btnTemplate" class="secondary" type="button">Load Bond template</button>
+        </div>
+
+        <div id="status" class="col-12 status" hidden></div>
+        <div class="col-12 help">
+          Tip: All fields are upserted. No duplicates. If the source exists, it will be reused.
+        </div>
+      </form>
+    </section>
+
+    <!-- Right: Quick Query + Stats -->
+    <section class="card">
+      <h2>Quick query</h2>
+      <div class="row">
+        <input id="qFilm" type="text" placeholder="Exact film title">
+        <button id="btnQFilm">Search Film</button>
+      </div>
+      <div id="filmResults"></div>
+      <hr style="border:none;border-top:1px solid var(--line); margin:14px 0;">
+      <div class="row">
+        <input id="qActor" type="text" placeholder="Actor full name">
+        <button id="btnQActor">Search Actor</button>
+      </div>
+      <div id="actorResults"></div>
+      <hr style="border:none;border-top:1px solid var(--line); margin:14px 0;">
+      <div class="row">
+        <input id="qBrand" type="text" placeholder="Brand">
+        <button id="btnQBrand">Search Brand</button>
+      </div>
+      <div id="brandResults"></div>
+
+      <h2 style="margin-top:18px;">Stats</h2>
+      <div class="row">
+        <button id="btnStats">Refresh Stats</button>
+      </div>
+      <div id="statsBox" class="status" style="margin-top:10px;"></div>
+      <div id="topBrands"></div>
+    </section>
+  </div>
+
+<script>
+const el = (id) => document.getElementById(id);
+
+function showStatus(ok, msg) {
+  const s = el('status');
+  s.hidden = false;
+  s.className = "status " + (ok ? "ok" : "err");
+  s.textContent = msg;
+}
+
+function clearForm() {
+  ['film_title','film_year','film_country','actor_name','character_name','brand_name','model_name','reference',
+   'source_type','source_title','source_publisher','source_url','source_date','confidence','narrative'
+  ].forEach(id => {
+    const node = el(id);
+    if (node.tagName === 'SELECT') {
+      node.selectedIndex = 0;
+    } else {
+      node.value = '';
+    }
+  });
+  el('confidence').value = 'B';
+  el('status').hidden = true;
+}
+
+function bondTemplate() {
+  el('film_title').value = 'Casino Royale';
+  el('film_year').value = '2006';
+  el('actor_name').value = 'Daniel Craig';
+  el('character_name').value = 'James Bond';
+  el('brand_name').value = 'Omega';
+  el('model_name').value = 'Seamaster';
+  el('reference').value = '';
+  el('source_type').value = 'manufacturer';
+  el('source_title').value = 'Omega x Bond partnership';
+  el('source_publisher').value = 'Omega';
+  el('source_url').value = '';
+  el('source_date').value = '';
+  el('confidence').value = 'A';
+  el('narrative').value = 'Screen-used Bond Omega per manufacturer program.';
+}
+
+async function addStructured() {
+  // Gather form data
+  const payload = {
+    film_title: el('film_title').value.trim(),
+    release_year: Number(el('film_year').value),
+    country: el('film_country').value.trim() || null,
+    actor_full_name: el('actor_name').value.trim(),
+    character_name: el('character_name').value.trim(),
+    brand: el('brand_name').value.trim(),
+    model: el('model_name').value.trim(),
+    reference: el('reference').value.trim() || null,
+    source: {
+      source_type: el('source_type').value.trim() || null,
+      title: el('source_title').value.trim() || null,
+      publisher: el('source_publisher').value.trim() || null,
+      url: el('source_url').value.trim() || null,
+      date_published: el('source_date').value.trim() || null
+    },
+    confidence: el('confidence').value,
+    narrative: el('narrative').value.trim() || null
+  };
+
+  // Basic required checks
+  if (!payload.film_title || !payload.release_year || !payload.actor_full_name || !payload.character_name || !payload.brand || !payload.model) {
+    showStatus(false, 'Please fill required fields: film title, year, actor, character, brand, model.');
+    return;
+  }
+  if (payload.source.source_type && !['manufacturer','auction','prop','publication','frame_still','other'].includes(payload.source.source_type)) {
+    showStatus(false, 'Invalid source type.');
+    return;
+  }
+
+  // 1) Try the structured endpoint first
+  try {
+    const res = await fetch('./api/add_structured', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data && data.success) {
+      showStatus(true, data.message || 'Saved.');
+      await refreshStats();
+      return;
+    }
+    // If structured endpoint not available, fall back to /api/add with a composed sentence
+  } catch (e) {
+    // fall through to fallback
+  }
+
+  // 2) Fallback: compose a sentence for /api/add
+  const sentence = `${payload.actor_full_name} wears ${payload.brand} ${payload.model}${payload.reference ? ' ' + payload.reference : ''} in ${payload.film_title} (${payload.release_year})`;
+  try {
+    const res = await fetch('./api/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        entry: sentence,
+        narrative: payload.narrative || '',
+        confidence: payload.confidence,
+        // if your backend auto-creates sources you can pass nothing;
+        // otherwise create sources from the admin side and pass source_id here
+        source_id: null
+      })
+    });
+    const data = await res.json();
+    if (data && data.success) {
+      showStatus(true, data.message || 'Saved (fallback).');
+      await refreshStats();
+    } else {
+      showStatus(false, data.error || 'Save failed.');
+    }
+  } catch (e) {
+    showStatus(false, 'Network or server error.');
+  }
+}
+
+function renderTable(rows, headers) {
+  if (!rows || rows.length === 0) return '<small class="help">No results.</small>';
+  let html = '<table><thead><tr>';
+  headers.forEach(h => html += '<th>' + h + '</th>');
+  html += '</tr></thead><tbody>';
+  rows.forEach(r => {
+    html += '<tr>';
+    headers.forEach(h => {
+      const key = h.toLowerCase().replace(/ /g, '_');
+      const val = r[h] !== undefined ? r[h] : (r[key] !== undefined ? r[key] : '');
+      html += '<td>' + (val === nul

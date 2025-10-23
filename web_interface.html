@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Film Watch Database</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .status-online {
+            background: #10b981;
+        }
+        
+        .status-offline {
+            background: #ef4444;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4a5568;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        .examples {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #4a5568;
+            line-height: 1.8;
+        }
+        
+        .examples strong {
+            color: #2d3748;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .result.success {
+            background: #f0fdf4;
+            border: 2px solid #86efac;
+            color: #166534;
+        }
+        
+        .result.error {
+            background: #fef2f2;
+            border: 2px solid #fca5a5;
+            color: #991b1b;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            color: #718096;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab:hover {
+            color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .query-results {
+            margin-top: 20px;
+        }
+        
+        .query-item {
+            padding: 15px;
+            background: #f8fafc;
+            border-left: 4px solid #667eea;
+            margin-bottom: 12px;
+            border-radius: 4px;
+        }
+        
+        .query-item-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 6px;
+        }
+        
+        .query-item-details {
+            color: #718096;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #718096;
+        }
+        
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🎬 Film Watch Database</h1>
+            <p class="subtitle">
+                <span class="status-indicator" id="statusDot"></span>
+                <span id="statusText">Connecting to server...</span>
+            </p>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('add')">Add Entry</button>
+                <button class="tab" onclick="switchTab('query')">Query Database</button>
+                <button class="tab" onclick="switchTab('stats')">Statistics</button>
+            </div>
+            
+            <!-- Add Entry Tab -->
+            <div id="add-tab" class="tab-content active">
+                <div class="examples">
+                    <strong>💡 Examples:</strong>
+                    • "Jakob Cedergren wears Citizen Eco-Drive Divers 200M in The Guilty (2018)"<br>
+                    • "Tom Cruise wears Breitling Navitimer in Top Gun: Maverick (2022)"<br>
+                    • "In Interstellar (2014), Matthew McConaughey as Cooper wears Hamilton Khaki Pilot"
+                </div>
+                
+                <div class="input-group">
+                    <label for="entry">Enter your film-watch entry:</label>
+                    <input type="text" id="entry" placeholder="Actor wears Brand Model in Film (Year)">
+                </div>
+                
+                <div class="input-group">
+                    <label for="narrative">Narrative role (optional):</label>
+                    <textarea id="narrative" placeholder="Describe the watch's role in the film..."></textarea>
+                </div>
+                
+                <button class="btn" onclick="addEntry()" id="addBtn">Add to Database</button>
+                
+                <div id="addResult" class="result"></div>
+            </div>
+            
+            <!-- Query Tab -->
+            <div id="query-tab" class="tab-content">
+                <div class="input-group">
+                    <label>Search by:</label>
+                    <select id="queryType">
+                        <option value="actor">Actor Name</option>
+                        <option value="brand">Watch Brand</option>
+                        <option value="film">Film Title</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label for="queryInput">Search term:</label>
+                    <input type="text" id="queryInput" placeholder="Enter actor name, brand, or film...">
+                </div>
+                
+                <button class="btn" onclick="performQuery()" id="queryBtn">Search</button>
+                
+                <div id="queryResults" class="query-results"></div>
+            </div>
+            
+            <!-- Stats Tab -->
+            <div id="stats-tab" class="tab-content">
+                <div id="statsContent">
+                    <div class="loading">Loading statistics</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:5000';
+        let serverOnline = false;
+        
+        // Check server status on load
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(API_URL + '/');
+                serverOnline = response.ok;
+            } catch (error) {
+                serverOnline = false;
+            }
+            
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            if (serverOnline) {
+                statusDot.className = 'status-indicator status-online';
+                statusText.textContent = 'Connected to database';
+            } else {
+                statusDot.className = 'status-indicator status-offline';
+                statusText.textContent = 'Server offline - Start flask_backend.py';
+            }
+        }
+        
+        // Switch tabs
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(tab + '-tab').classList.add('active');
+            
+            if (tab === 'stats') {
+                loadStats();
+            }
+        }
+        
+        // Add entry to database
+        async function addEntry() {
+            const entryText = document.getElementById('entry').value.trim();
+            const narrativeText = document.getElementById('narrative').value.trim();
+            const resultDiv = document.getElementById('addResult');
+            const addBtn = document.getElementById('addBtn');
+            
+            if (!entryText) {
+                showResult(resultDiv, 'error', 'Please enter a film-watch entry.');
+                return;
+            }
+            
+            if (!serverOnline) {
+                showResult(resultDiv, 'error', 'Server is offline. Please start flask_backend.py');
+                return;
+            }
+            
+            addBtn.disabled = true;
+            addBtn.textContent = 'Adding...';
+            
+            try {
+                const response = await fetch(API_URL + '/api/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        entry: entryText,
+                        narrative: narrativeText || 'Watch worn in film.'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult(resultDiv, 'success', '✓ ' + data.message);
+                    document.getElementById('entry').value = '';
+                    document.getElementById('narrative').value = '';
+                } else {
+                    showResult(resultDiv, 'error', 'Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                showResult(resultDiv, 'error', 'Network error: ' + error.message);
+            } finally {
+                addBtn.disabled = false;
+                addBtn.textContent = 'Add to Database';
+            }
+        }
+        
+        // Perform query
+        async function performQuery() {
+            const queryType = document.getElementById('queryType').value;
+            const queryInput = document.getElementById('queryInput').value.trim();
+            const resultsDiv = document.getElementById('queryResults');
+            const queryBtn = document.getElementById('queryBtn');
+            
+            if (!queryInput) {
+                resultsDiv.innerHTML = '<div class="result error">Please enter a search term.</div>';
+                return;
+            }
+            
+            if (!serverOnline) {
+                resultsDiv.innerHTML = '<div class="result error">Server is offline. Please start flask_backend.py</div>';
+                return;
+            }
+            
+            queryBtn.disabled = true;
+            queryBtn.textContent = 'Searching...';
+            resultsDiv.innerHTML = '<div class="loading">Searching database</div>';
+            
+            try {
+                const response = await fetch(API_URL + `/api/query/${queryType}/${encodeURIComponent(queryInput)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.count === 0) {
+                        resultsDiv.innerHTML = '<div class="result error">No results found.</div>';
+                    } else {
+                        displayQueryResults(data, queryType, resultsDiv);
+                    }
+                } else {
+                    resultsDiv.innerHTML = `<div class="result error">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="result error">Network error: ${error.message}</div>`;
+            } finally {
+                queryBtn.disabled = false;
+                queryBtn.textContent = 'Search';
+            }
+        }
+        
+        // Display query results
+        function displayQueryResults(data, queryType, container) {
+            let html = `<div class="result success">Found ${data.count} result(s)</div>`;
+            
+            if (queryType === 'actor') {
+                data.films.forEach(film => {
+                    html += `
+                        <div class="query-item">
+                            <div class="query-item-title">${film.title} (${film.year})</div>
+                            <div class="query-item-details">
+                                <strong>Character:</strong> ${film.character}<br>
+                                <strong>Watch:</strong> ${film.brand} ${film.model}<br>
+                                <strong>Role:</strong> ${film.narrative}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else if (queryType === 'brand') {
+                data.films.forEach(film => {
+                    html += `
+                        <div class="query-item">
+                            <div class="query-item-title">${film.title} (${film.year})</div>
+                            <div class="query-item-details">
+                                <strong>Actor:</strong> ${film.actor} as ${film.character}<br>
+                                <strong>Watch:</strong> ${film.model}<br>
+                                <strong>Role:</strong> ${film.narrative}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else if (queryType === 'film') {
+                data.watches.forEach(watch => {
+                    html += `
+                        <div class="query-item">
+                            <div class="query-item-title">${watch.actor} as ${watch.character}</div>
+                            <div class="query-item-details">
+                                <strong>Watch:</strong> ${watch.brand} ${watch.model}<br>
+                                <strong>Role:</strong> ${watch.narrative}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // Load statistics
+        async function loadStats() {
+            const container = document.getElementById('statsContent');
+            container.innerHTML = '<div class="loading">Loading statistics</div>';
+            
+            if (!serverOnline) {
+                container.innerHTML = '<div class="result error">Server is offline. Please start flask_backend.py</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_URL + '/api/stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = data.stats;
+                    let html = `
+                        <div class="stat-grid">
+                            <div class="stat-card">
+                                <div class="stat-number">${stats.films}</div>
+                                <div class="stat-label">Films</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${stats.actors}</div>
+                                <div class="stat-label">Actors</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${stats.brands}</div>
+                                <div class="stat-label">Brands</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${stats.entries}</div>
+                                <div class="stat-label">Total Entries</div>
+                            </div>
+                        </div>
+                        
+                        <h3 style="margin-top: 30px; margin-bottom: 15px; color: #2d3748;">Top Watch Brands</h3>
+                    `;
+                    
+                    stats.top_brands.forEach((brand, index) => {
+                        html += `
+                            <div class="query-item">
+                                <div class="query-item-title">${index + 1}. ${brand.brand}</div>
+                                <div class="query-item-details">
+                                    Appears in ${brand.count} film${brand.count !== 1 ? 's' : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `<div class="result error">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="result error">Network error: ${error.message}</div>`;
+            }
+        }
+        
+        // Helper function to show results
+        function showResult(element, type, message) {
+            element.className = `result ${type}`;
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+        
+        // Handle Enter key in input fields
+        document.getElementById('entry').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addEntry();
+            }
+        });
+        
+        document.getElementById('queryInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performQuery();
+            }
+        });
+        
+        // Check server status on page load
+        checkServerStatus();
+        
+        // Recheck server status every 5 seconds
+        setInterval(checkServerStatus, 5000);
+    </script>
+</body>
+</html>
