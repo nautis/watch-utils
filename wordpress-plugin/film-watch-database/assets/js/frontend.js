@@ -112,13 +112,17 @@
      * Build HTML for actor search result
      */
     function buildActorResultHTML(film) {
+        let sourceHtml = '';
+        if (film.source_url) {
+            sourceHtml = `<br><strong>Source:</strong> <a href="${escapeHtml(film.source_url)}" target="_blank" rel="noopener">View Reference</a>`;
+        }
         return `
             <div class="fwd-item">
                 <div class="fwd-item-title">${escapeHtml(film.title)} (${escapeHtml(film.year)})</div>
                 <div class="fwd-item-details">
                     <strong>Character:</strong> ${escapeHtml(film.character)}<br>
                     <strong>Watch:</strong> ${escapeHtml(film.brand)} ${escapeHtml(film.model)}<br>
-                    <strong>Role:</strong> ${escapeHtml(film.narrative)}
+                    <strong>Role:</strong> ${escapeHtml(film.narrative)}${sourceHtml}
                 </div>
             </div>
         `;
@@ -128,13 +132,17 @@
      * Build HTML for brand search result
      */
     function buildBrandResultHTML(film) {
+        let sourceHtml = '';
+        if (film.source_url) {
+            sourceHtml = `<br><strong>Source:</strong> <a href="${escapeHtml(film.source_url)}" target="_blank" rel="noopener">View Reference</a>`;
+        }
         return `
             <div class="fwd-item">
                 <div class="fwd-item-title">${escapeHtml(film.title)} (${escapeHtml(film.year)})</div>
                 <div class="fwd-item-details">
                     <strong>Actor:</strong> ${escapeHtml(film.actor)} as ${escapeHtml(film.character)}<br>
                     <strong>Watch:</strong> ${escapeHtml(film.model)}<br>
-                    <strong>Role:</strong> ${escapeHtml(film.narrative)}
+                    <strong>Role:</strong> ${escapeHtml(film.narrative)}${sourceHtml}
                 </div>
             </div>
         `;
@@ -144,12 +152,16 @@
      * Build HTML for film search result
      */
     function buildFilmResultHTML(watch) {
+        let sourceHtml = '';
+        if (watch.source_url) {
+            sourceHtml = `<br><strong>Source:</strong> <a href="${escapeHtml(watch.source_url)}" target="_blank" rel="noopener">View Reference</a>`;
+        }
         return `
             <div class="fwd-item">
                 <div class="fwd-item-title">${escapeHtml(watch.actor)} as ${escapeHtml(watch.character)}</div>
                 <div class="fwd-item-details">
                     <strong>Watch:</strong> ${escapeHtml(watch.brand)} ${escapeHtml(watch.model)}<br>
-                    <strong>Role:</strong> ${escapeHtml(watch.narrative)}
+                    <strong>Role:</strong> ${escapeHtml(watch.narrative)}${sourceHtml}
                 </div>
             </div>
         `;
@@ -172,6 +184,7 @@
     function addEntry() {
         const entryText = document.getElementById('fwd-entry-text');
         const narrative = document.getElementById('fwd-narrative');
+        const sourceUrl = document.getElementById('fwd-source-url');
         const resultDiv = document.getElementById('fwd-add-result');
         const addBtn = document.getElementById('fwd-add-btn');
 
@@ -179,6 +192,7 @@
 
         const entryValue = entryText.value.trim();
         const narrativeValue = narrative.value.trim();
+        const sourceUrlValue = sourceUrl ? sourceUrl.value.trim() : '';
 
         if (!entryValue) {
             showResult(resultDiv, 'fwd-error', 'Please enter an entry text.');
@@ -198,13 +212,15 @@
                 action: 'fwd_add_entry',
                 nonce: fwdAjax.nonce,
                 entry_text: entryValue,
-                narrative: narrativeValue
+                narrative: narrativeValue,
+                source_url: sourceUrlValue
             },
             success: function(response) {
                 if (response.success) {
                     showResult(resultDiv, 'fwd-success', '✓ ' + response.data.message);
                     entryText.value = '';
                     narrative.value = '';
+                    if (sourceUrl) sourceUrl.value = '';
                 } else {
                     showResult(resultDiv, 'fwd-error', 'Error: ' +
                         (response.data.error || 'Unknown error occurred'));

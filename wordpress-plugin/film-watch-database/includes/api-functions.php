@@ -40,13 +40,17 @@ function fwd_query_film($film_title) {
 /**
  * Add new entry to database
  */
-function fwd_add_entry($entry_text, $narrative = '') {
+function fwd_add_entry($entry_text, $narrative = '', $source_url = '') {
     try {
         $db = fwd_db();
         $parsed = $db->parse_entry($entry_text);
 
         if ($narrative) {
             $parsed['narrative'] = $narrative;
+        }
+
+        if ($source_url) {
+            $parsed['source_url'] = $source_url;
         }
 
         $db->insert_entry($parsed);
@@ -113,12 +117,13 @@ function fwd_ajax_add_entry() {
 
     $entry_text = sanitize_text_field($_POST['entry_text']);
     $narrative = sanitize_textarea_field($_POST['narrative']);
+    $source_url = !empty($_POST['source_url']) ? esc_url_raw($_POST['source_url']) : '';
 
     if (empty($entry_text)) {
         wp_send_json_error(array('message' => 'Entry text is required'));
     }
 
-    $result = fwd_add_entry($entry_text, $narrative);
+    $result = fwd_add_entry($entry_text, $narrative, $source_url);
 
     if (isset($result['success']) && $result['success']) {
         wp_send_json_success($result);

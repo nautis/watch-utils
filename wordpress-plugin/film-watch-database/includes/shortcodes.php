@@ -144,6 +144,9 @@ function fwd_actor_shortcode($atts) {
                     <strong>Character:</strong> <?php echo esc_html($film['character']); ?><br>
                     <strong>Watch:</strong> <?php echo esc_html($film['brand']); ?> <?php echo esc_html($film['model']); ?><br>
                     <strong>Role:</strong> <?php echo esc_html($film['narrative']); ?>
+                    <?php if (!empty($film['source_url'])): ?>
+                        <br><strong>Source:</strong> <a href="<?php echo esc_url($film['source_url']); ?>" target="_blank" rel="noopener">View Reference</a>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -191,6 +194,9 @@ function fwd_brand_shortcode($atts) {
                     <strong>Actor:</strong> <?php echo esc_html($film['actor']); ?> as <?php echo esc_html($film['character']); ?><br>
                     <strong>Watch:</strong> <?php echo esc_html($film['model']); ?><br>
                     <strong>Role:</strong> <?php echo esc_html($film['narrative']); ?>
+                    <?php if (!empty($film['source_url'])): ?>
+                        <br><strong>Source:</strong> <a href="<?php echo esc_url($film['source_url']); ?>" target="_blank" rel="noopener">View Reference</a>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -237,6 +243,9 @@ function fwd_film_shortcode($atts) {
                 <div class="fwd-item-details">
                     <strong>Watch:</strong> <?php echo esc_html($watch['brand']); ?> <?php echo esc_html($watch['model']); ?><br>
                     <strong>Role:</strong> <?php echo esc_html($watch['narrative']); ?>
+                    <?php if (!empty($watch['source_url'])): ?>
+                        <br><strong>Source:</strong> <a href="<?php echo esc_url($watch['source_url']); ?>" target="_blank" rel="noopener">View Reference</a>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -286,6 +295,20 @@ function fwd_add_shortcode($atts) {
                 class="fwd-textarea"
                 placeholder="Describe the watch's role in the film..."
             ></textarea>
+        </div>
+
+        <div class="fwd-form-group">
+            <label for="fwd-source-url">Source URL (optional):</label>
+            <input
+                type="url"
+                id="fwd-source-url"
+                class="fwd-input"
+                size="80"
+                placeholder="https://www.watch-id.com/sightings/..."
+            >
+            <small style="display: block; margin-top: 5px; color: #666;">
+                Add a reference URL for verification (e.g., watch-id.com, IMDB, etc.)
+            </small>
         </div>
 
         <button id="fwd-add-btn" class="fwd-button">Add to Database</button>

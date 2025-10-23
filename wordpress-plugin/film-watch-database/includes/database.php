@@ -103,6 +103,7 @@ class FWD_Database {
             character_id bigint(20) NOT NULL,
             watch_id bigint(20) NOT NULL,
             narrative_role text,
+            source_url varchar(500) DEFAULT NULL,
             PRIMARY KEY (faw_id),
             UNIQUE KEY film_actor_char_watch (film_id, actor_id, character_id, watch_id),
             KEY film_id (film_id),
@@ -113,6 +114,27 @@ class FWD_Database {
 
         foreach ($sql as $query) {
             dbDelta($query);
+        }
+
+        // Check and upgrade schema for existing installations
+        $this->upgrade_schema();
+    }
+
+    /**
+     * Upgrade schema for existing installations
+     */
+    private function upgrade_schema() {
+        // Check if source_url column exists
+        $column_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->film_actor_watch_table} LIKE 'source_url'"
+        );
+
+        // Add source_url column if it doesn't exist
+        if (empty($column_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->film_actor_watch_table}
+                 ADD COLUMN source_url varchar(500) DEFAULT NULL AFTER narrative_role"
+            );
         }
     }
 
@@ -318,16 +340,25 @@ class FWD_Database {
         }
 
         // Insert relationship
+        $insert_data = array(
+            'film_id' => $film_id,
+            'actor_id' => $actor_id,
+            'character_id' => $character_id,
+            'watch_id' => $watch_id,
+            'narrative_role' => $data['narrative']
+        );
+        $format = array('%d', '%d', '%d', '%d', '%s');
+
+        // Add source URL if provided
+        if (!empty($data['source_url'])) {
+            $insert_data['source_url'] = $data['source_url'];
+            $format[] = '%s';
+        }
+
         $this->wpdb->insert(
             $this->film_actor_watch_table,
-            array(
-                'film_id' => $film_id,
-                'actor_id' => $actor_id,
-                'character_id' => $character_id,
-                'watch_id' => $watch_id,
-                'narrative_role' => $data['narrative']
-            ),
-            array('%d', '%d', '%d', '%d', '%s')
+            $insert_data,
+            $format
         );
 
         return true;
@@ -339,7 +370,7 @@ class FWD_Database {
     public function query_actor($actor_name) {
         $results = $this->wpdb->get_results($this->wpdb->prepare(
             "SELECT f.title, f.year, b.brand_name, w.model_reference,
-                    c.character_name, faw.narrative_role
+                    c.character_name, faw.narrative_role, faw.source_url
              FROM {$this->film_actor_watch_table} faw
              JOIN {$this->films_table} f ON faw.film_id = f.film_id
              JOIN {$this->actors_table} a ON faw.actor_id = a.actor_id
@@ -359,7 +390,8 @@ class FWD_Database {
                 'brand' => $row['brand_name'],
                 'model' => $row['model_reference'],
                 'character' => $row['character_name'],
-                'narrative' => $row['narrative_role']
+                'narrative' => $row['narrative_role'],
+                'source_url' => $row['source_url']
             );
         }
 
@@ -377,7 +409,7 @@ class FWD_Database {
     public function query_brand($brand_name) {
         $results = $this->wpdb->get_results($this->wpdb->prepare(
             "SELECT f.title, f.year, a.actor_name, w.model_reference,
-                    c.character_name, faw.narrative_role
+                    c.character_name, faw.narrative_role, faw.source_url
              FROM {$this->film_actor_watch_table} faw
              JOIN {$this->films_table} f ON faw.film_id = f.film_id
              JOIN {$this->actors_table} a ON faw.actor_id = a.actor_id
@@ -397,7 +429,8 @@ class FWD_Database {
                 'actor' => $row['actor_name'],
                 'model' => $row['model_reference'],
                 'character' => $row['character_name'],
-                'narrative' => $row['narrative_role']
+                'narrative' => $row['narrative_role'],
+                'source_url' => $row['source_url']
             );
         }
 
@@ -415,7 +448,7 @@ class FWD_Database {
     public function query_film($film_title) {
         $results = $this->wpdb->get_results($this->wpdb->prepare(
             "SELECT f.title, f.year, a.actor_name, b.brand_name,
-                    w.model_reference, c.character_name, faw.narrative_role
+                    w.model_reference, c.character_name, faw.narrative_role, faw.source_url
              FROM {$this->film_actor_watch_table} faw
              JOIN {$this->films_table} f ON faw.film_id = f.film_id
              JOIN {$this->actors_table} a ON faw.actor_id = a.actor_id
@@ -436,7 +469,8 @@ class FWD_Database {
                 'brand' => $row['brand_name'],
                 'model' => $row['model_reference'],
                 'character' => $row['character_name'],
-                'narrative' => $row['narrative_role']
+                'narrative' => $row['narrative_role'],
+                'source_url' => $row['source_url']
             );
         }
 
