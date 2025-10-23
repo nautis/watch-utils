@@ -1,7 +1,7 @@
 <?php
 /**
- * Database Handler - Native PHP SQLite Implementation
- * Replaces Flask backend with WordPress-native PHP code
+ * Database Handler - WordPress MySQL Implementation
+ * Uses WordPress's native database connection (MySQL/MariaDB)
  */
 
 // Exit if accessed directly
@@ -11,121 +11,108 @@ if (!defined('ABSPATH')) {
 
 class FWD_Database {
 
-    private $db = null;
-    private $db_path = null;
+    private $wpdb;
+    private $table_prefix;
+
+    // Table names
+    private $films_table;
+    private $brands_table;
+    private $watches_table;
+    private $actors_table;
+    private $characters_table;
+    private $film_actor_watch_table;
 
     /**
      * Constructor
      */
     public function __construct() {
-        // Store database in WordPress uploads directory
-        $upload_dir = wp_upload_dir();
-        $this->db_path = $upload_dir['basedir'] . '/film-watch-database/film_watches.db';
+        global $wpdb;
+        $this->wpdb = $wpdb;
+        $this->table_prefix = $wpdb->prefix . 'fwd_';
 
-        // Ensure directory exists
-        $db_dir = dirname($this->db_path);
-        if (!file_exists($db_dir)) {
-            wp_mkdir_p($db_dir);
-        }
+        // Define table names
+        $this->films_table = $this->table_prefix . 'films';
+        $this->brands_table = $this->table_prefix . 'brands';
+        $this->watches_table = $this->table_prefix . 'watches';
+        $this->actors_table = $this->table_prefix . 'actors';
+        $this->characters_table = $this->table_prefix . 'characters';
+        $this->film_actor_watch_table = $this->table_prefix . 'film_actor_watch';
 
-        if ($this->connect()) {
-            $this->create_tables();
-        }
-    }
-
-    /**
-     * Connect to SQLite database
-     */
-    private function connect() {
-        // Check if PDO SQLite driver is available
-        if (!extension_loaded('pdo_sqlite')) {
-            error_log('FWD Database Error: PDO SQLite extension is not installed');
-            add_action('admin_notices', function() {
-                echo '<div class="notice notice-error"><p><strong>Film Watch Database Error:</strong> The PDO SQLite extension is not installed. Please run: <code>sudo apt-get install php-sqlite3</code> and restart your web server.</p></div>';
-            });
-            return false;
-        }
-
-        try {
-            $this->db = new PDO('sqlite:' . $this->db_path);
-            $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            // Enable foreign keys
-            $this->db->exec('PRAGMA foreign_keys = ON');
-        } catch (PDOException $e) {
-            error_log('FWD Database Connection Error: ' . $e->getMessage());
-            add_action('admin_notices', function() use ($e) {
-                echo '<div class="notice notice-error"><p><strong>Film Watch Database Error:</strong> ' . esc_html($e->getMessage()) . '</p></div>';
-            });
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Check if database is connected
-     */
-    private function is_connected() {
-        return $this->db !== null;
+        $this->create_tables();
     }
 
     /**
      * Create database tables if they don't exist
      */
     private function create_tables() {
-        if (!$this->is_connected()) {
-            return false;
-        }
-        $schema = "
-        CREATE TABLE IF NOT EXISTS films (
-            film_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title VARCHAR(255) NOT NULL,
-            year INTEGER NOT NULL,
-            UNIQUE(title, year)
-        );
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 
-        CREATE TABLE IF NOT EXISTS brands (
-            brand_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            brand_name VARCHAR(100) NOT NULL UNIQUE
-        );
+        $charset_collate = $this->wpdb->get_charset_collate();
 
-        CREATE TABLE IF NOT EXISTS watches (
-            watch_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            brand_id INTEGER NOT NULL,
-            model_reference VARCHAR(255) NOT NULL,
-            verification_level VARCHAR(50),
-            FOREIGN KEY (brand_id) REFERENCES brands(brand_id),
-            UNIQUE(brand_id, model_reference)
-        );
+        $sql = array();
 
-        CREATE TABLE IF NOT EXISTS actors (
-            actor_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            actor_name VARCHAR(255) NOT NULL UNIQUE
-        );
+        // Films table
+        $sql[] = "CREATE TABLE {$this->films_table} (
+            film_id bigint(20) NOT NULL AUTO_INCREMENT,
+            title varchar(255) NOT NULL,
+            year int(11) NOT NULL,
+            PRIMARY KEY (film_id),
+            UNIQUE KEY title_year (title(191), year)
+        ) $charset_collate;";
 
-        CREATE TABLE IF NOT EXISTS characters (
-            character_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            character_name VARCHAR(255) NOT NULL
-        );
+        // Brands table
+        $sql[] = "CREATE TABLE {$this->brands_table} (
+            brand_id bigint(20) NOT NULL AUTO_INCREMENT,
+            brand_name varchar(100) NOT NULL,
+            PRIMARY KEY (brand_id),
+            UNIQUE KEY brand_name (brand_name)
+        ) $charset_collate;";
 
-        CREATE TABLE IF NOT EXISTS film_actor_watch (
-            faw_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            film_id INTEGER NOT NULL,
-            actor_id INTEGER NOT NULL,
-            character_id INTEGER NOT NULL,
-            watch_id INTEGER NOT NULL,
-            narrative_role TEXT,
-            FOREIGN KEY (film_id) REFERENCES films(film_id),
-            FOREIGN KEY (actor_id) REFERENCES actors(actor_id),
-            FOREIGN KEY (character_id) REFERENCES characters(character_id),
-            FOREIGN KEY (watch_id) REFERENCES watches(watch_id),
-            UNIQUE(film_id, actor_id, character_id, watch_id)
-        );
-        ";
+        // Watches table
+        $sql[] = "CREATE TABLE {$this->watches_table} (
+            watch_id bigint(20) NOT NULL AUTO_INCREMENT,
+            brand_id bigint(20) NOT NULL,
+            model_reference varchar(255) NOT NULL,
+            verification_level varchar(50) DEFAULT NULL,
+            PRIMARY KEY (watch_id),
+            UNIQUE KEY brand_model (brand_id, model_reference(191)),
+            KEY brand_id (brand_id)
+        ) $charset_collate;";
 
-        try {
-            $this->db->exec($schema);
-        } catch (PDOException $e) {
-            error_log('FWD Database Schema Error: ' . $e->getMessage());
+        // Actors table
+        $sql[] = "CREATE TABLE {$this->actors_table} (
+            actor_id bigint(20) NOT NULL AUTO_INCREMENT,
+            actor_name varchar(255) NOT NULL,
+            PRIMARY KEY (actor_id),
+            UNIQUE KEY actor_name (actor_name(191))
+        ) $charset_collate;";
+
+        // Characters table
+        $sql[] = "CREATE TABLE {$this->characters_table} (
+            character_id bigint(20) NOT NULL AUTO_INCREMENT,
+            character_name varchar(255) NOT NULL,
+            PRIMARY KEY (character_id),
+            KEY character_name (character_name(191))
+        ) $charset_collate;";
+
+        // Film-Actor-Watch relationship table
+        $sql[] = "CREATE TABLE {$this->film_actor_watch_table} (
+            faw_id bigint(20) NOT NULL AUTO_INCREMENT,
+            film_id bigint(20) NOT NULL,
+            actor_id bigint(20) NOT NULL,
+            character_id bigint(20) NOT NULL,
+            watch_id bigint(20) NOT NULL,
+            narrative_role text,
+            PRIMARY KEY (faw_id),
+            UNIQUE KEY film_actor_char_watch (film_id, actor_id, character_id, watch_id),
+            KEY film_id (film_id),
+            KEY actor_id (actor_id),
+            KEY character_id (character_id),
+            KEY watch_id (watch_id)
+        ) $charset_collate;";
+
+        foreach ($sql as $query) {
+            dbDelta($query);
         }
     }
 
@@ -254,112 +241,115 @@ class FWD_Database {
 
     /**
      * Insert entry into database
-     * Converted from Python execute_insert() function
      */
     public function insert_entry($data) {
-        if (!$this->is_connected()) {
-            throw new Exception('Database connection failed. Please check that PDO SQLite extension is installed.');
+        // Insert film
+        $this->wpdb->query($this->wpdb->prepare(
+            "INSERT IGNORE INTO {$this->films_table} (title, year) VALUES (%s, %d)",
+            $data['title'], $data['year']
+        ));
+
+        // Insert brand
+        $this->wpdb->query($this->wpdb->prepare(
+            "INSERT IGNORE INTO {$this->brands_table} (brand_name) VALUES (%s)",
+            $data['brand']
+        ));
+
+        // Get brand_id
+        $brand_id = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT brand_id FROM {$this->brands_table} WHERE brand_name = %s",
+            $data['brand']
+        ));
+
+        // Insert watch
+        $this->wpdb->query($this->wpdb->prepare(
+            "INSERT IGNORE INTO {$this->watches_table} (brand_id, model_reference, verification_level) VALUES (%d, %s, %s)",
+            $brand_id, $data['model'], $data['verification']
+        ));
+
+        // Insert actor
+        $this->wpdb->query($this->wpdb->prepare(
+            "INSERT IGNORE INTO {$this->actors_table} (actor_name) VALUES (%s)",
+            $data['actor']
+        ));
+
+        // Get IDs
+        $film_id = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT film_id FROM {$this->films_table} WHERE title = %s AND year = %d",
+            $data['title'], $data['year']
+        ));
+
+        $actor_id = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT actor_id FROM {$this->actors_table} WHERE actor_name = %s",
+            $data['actor']
+        ));
+
+        $watch_id = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT w.watch_id FROM {$this->watches_table} w
+             JOIN {$this->brands_table} b ON w.brand_id = b.brand_id
+             WHERE b.brand_name = %s AND w.model_reference = %s",
+            $data['brand'], $data['model']
+        ));
+
+        // Check for duplicates
+        $existing = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT faw_id FROM {$this->film_actor_watch_table}
+             WHERE film_id = %d AND actor_id = %d AND watch_id = %d",
+            $film_id, $actor_id, $watch_id
+        ));
+
+        if ($existing) {
+            throw new Exception("Duplicate entry: {$data['actor']} wearing {$data['brand']} {$data['model']} in {$data['title']} already exists in the database.");
         }
 
-        try {
-            $this->db->beginTransaction();
+        // Check if character exists
+        $character_id = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT character_id FROM {$this->characters_table} WHERE character_name = %s LIMIT 1",
+            $data['character']
+        ));
 
-            // Insert film
-            $stmt = $this->db->prepare("INSERT OR IGNORE INTO films (title, year) VALUES (?, ?)");
-            $stmt->execute(array($data['title'], $data['year']));
-
-            // Insert brand
-            $stmt = $this->db->prepare("INSERT OR IGNORE INTO brands (brand_name) VALUES (?)");
-            $stmt->execute(array($data['brand']));
-
-            // Get brand_id
-            $stmt = $this->db->prepare("SELECT brand_id FROM brands WHERE brand_name = ?");
-            $stmt->execute(array($data['brand']));
-            $brand_id = $stmt->fetchColumn();
-
-            // Insert watch
-            $stmt = $this->db->prepare("INSERT OR IGNORE INTO watches (brand_id, model_reference, verification_level) VALUES (?, ?, ?)");
-            $stmt->execute(array($brand_id, $data['model'], $data['verification']));
-
-            // Insert actor
-            $stmt = $this->db->prepare("INSERT OR IGNORE INTO actors (actor_name) VALUES (?)");
-            $stmt->execute(array($data['actor']));
-
-            // Get IDs
-            $stmt = $this->db->prepare("SELECT film_id FROM films WHERE title = ? AND year = ?");
-            $stmt->execute(array($data['title'], $data['year']));
-            $film_id = $stmt->fetchColumn();
-
-            $stmt = $this->db->prepare("SELECT actor_id FROM actors WHERE actor_name = ?");
-            $stmt->execute(array($data['actor']));
-            $actor_id = $stmt->fetchColumn();
-
-            $stmt = $this->db->prepare("SELECT w.watch_id FROM watches w
-                                        JOIN brands b ON w.brand_id = b.brand_id
-                                        WHERE b.brand_name = ? AND w.model_reference = ?");
-            $stmt->execute(array($data['brand'], $data['model']));
-            $watch_id = $stmt->fetchColumn();
-
-            // Check for duplicates
-            $stmt = $this->db->prepare("SELECT faw_id FROM film_actor_watch
-                                       WHERE film_id = ? AND actor_id = ? AND watch_id = ?");
-            $stmt->execute(array($film_id, $actor_id, $watch_id));
-            $existing = $stmt->fetchColumn();
-
-            if ($existing) {
-                $this->db->rollBack();
-                throw new Exception("Duplicate entry: {$data['actor']} wearing {$data['brand']} {$data['model']} in {$data['title']} already exists in the database.");
-            }
-
-            // Check if character exists
-            $stmt = $this->db->prepare("SELECT character_id FROM characters WHERE character_name = ? LIMIT 1");
-            $stmt->execute(array($data['character']));
-            $character_id = $stmt->fetchColumn();
-
-            if (!$character_id) {
-                $stmt = $this->db->prepare("INSERT INTO characters (character_name) VALUES (?)");
-                $stmt->execute(array($data['character']));
-                $character_id = $this->db->lastInsertId();
-            }
-
-            // Insert relationship
-            $stmt = $this->db->prepare("INSERT INTO film_actor_watch
-                                       (film_id, actor_id, character_id, watch_id, narrative_role)
-                                       VALUES (?, ?, ?, ?, ?)");
-            $stmt->execute(array($film_id, $actor_id, $character_id, $watch_id, $data['narrative']));
-
-            $this->db->commit();
-            return true;
-
-        } catch (Exception $e) {
-            $this->db->rollBack();
-            throw $e;
+        if (!$character_id) {
+            $this->wpdb->insert(
+                $this->characters_table,
+                array('character_name' => $data['character']),
+                array('%s')
+            );
+            $character_id = $this->wpdb->insert_id;
         }
+
+        // Insert relationship
+        $this->wpdb->insert(
+            $this->film_actor_watch_table,
+            array(
+                'film_id' => $film_id,
+                'actor_id' => $actor_id,
+                'character_id' => $character_id,
+                'watch_id' => $watch_id,
+                'narrative_role' => $data['narrative']
+            ),
+            array('%d', '%d', '%d', '%d', '%s')
+        );
+
+        return true;
     }
 
     /**
      * Query watches by actor
      */
     public function query_actor($actor_name) {
-        if (!$this->is_connected()) {
-            return array('success' => false, 'error' => 'Database not connected', 'count' => 0, 'films' => array());
-        }
-
-        $stmt = $this->db->prepare("
-            SELECT f.title, f.year, b.brand_name, w.model_reference,
-                   c.character_name, faw.narrative_role
-            FROM film_actor_watch faw
-            JOIN films f ON faw.film_id = f.film_id
-            JOIN actors a ON faw.actor_id = a.actor_id
-            JOIN characters c ON faw.character_id = c.character_id
-            JOIN watches w ON faw.watch_id = w.watch_id
-            JOIN brands b ON w.brand_id = b.brand_id
-            WHERE a.actor_name LIKE ?
-            ORDER BY f.year DESC
-        ");
-
-        $stmt->execute(array('%' . $actor_name . '%'));
-        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT f.title, f.year, b.brand_name, w.model_reference,
+                    c.character_name, faw.narrative_role
+             FROM {$this->film_actor_watch_table} faw
+             JOIN {$this->films_table} f ON faw.film_id = f.film_id
+             JOIN {$this->actors_table} a ON faw.actor_id = a.actor_id
+             JOIN {$this->characters_table} c ON faw.character_id = c.character_id
+             JOIN {$this->watches_table} w ON faw.watch_id = w.watch_id
+             JOIN {$this->brands_table} b ON w.brand_id = b.brand_id
+             WHERE a.actor_name LIKE %s
+             ORDER BY f.year DESC",
+            '%' . $this->wpdb->esc_like($actor_name) . '%'
+        ), ARRAY_A);
 
         $films = array();
         foreach ($results as $row) {
@@ -385,25 +375,19 @@ class FWD_Database {
      * Query films by brand
      */
     public function query_brand($brand_name) {
-        if (!$this->is_connected()) {
-            return array('success' => false, 'error' => 'Database not connected', 'count' => 0, 'films' => array());
-        }
-
-        $stmt = $this->db->prepare("
-            SELECT f.title, f.year, a.actor_name, w.model_reference,
-                   c.character_name, faw.narrative_role
-            FROM film_actor_watch faw
-            JOIN films f ON faw.film_id = f.film_id
-            JOIN actors a ON faw.actor_id = a.actor_id
-            JOIN characters c ON faw.character_id = c.character_id
-            JOIN watches w ON faw.watch_id = w.watch_id
-            JOIN brands b ON w.brand_id = b.brand_id
-            WHERE b.brand_name LIKE ?
-            ORDER BY f.year DESC
-        ");
-
-        $stmt->execute(array('%' . $brand_name . '%'));
-        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT f.title, f.year, a.actor_name, w.model_reference,
+                    c.character_name, faw.narrative_role
+             FROM {$this->film_actor_watch_table} faw
+             JOIN {$this->films_table} f ON faw.film_id = f.film_id
+             JOIN {$this->actors_table} a ON faw.actor_id = a.actor_id
+             JOIN {$this->characters_table} c ON faw.character_id = c.character_id
+             JOIN {$this->watches_table} w ON faw.watch_id = w.watch_id
+             JOIN {$this->brands_table} b ON w.brand_id = b.brand_id
+             WHERE b.brand_name LIKE %s
+             ORDER BY f.year DESC",
+            '%' . $this->wpdb->esc_like($brand_name) . '%'
+        ), ARRAY_A);
 
         $films = array();
         foreach ($results as $row) {
@@ -429,25 +413,19 @@ class FWD_Database {
      * Query watches by film
      */
     public function query_film($film_title) {
-        if (!$this->is_connected()) {
-            return array('success' => false, 'error' => 'Database not connected', 'count' => 0, 'watches' => array());
-        }
-
-        $stmt = $this->db->prepare("
-            SELECT f.title, f.year, a.actor_name, b.brand_name,
-                   w.model_reference, c.character_name, faw.narrative_role
-            FROM film_actor_watch faw
-            JOIN films f ON faw.film_id = f.film_id
-            JOIN actors a ON faw.actor_id = a.actor_id
-            JOIN characters c ON faw.character_id = c.character_id
-            JOIN watches w ON faw.watch_id = w.watch_id
-            JOIN brands b ON w.brand_id = b.brand_id
-            WHERE f.title LIKE ?
-            ORDER BY a.actor_name
-        ");
-
-        $stmt->execute(array('%' . $film_title . '%'));
-        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT f.title, f.year, a.actor_name, b.brand_name,
+                    w.model_reference, c.character_name, faw.narrative_role
+             FROM {$this->film_actor_watch_table} faw
+             JOIN {$this->films_table} f ON faw.film_id = f.film_id
+             JOIN {$this->actors_table} a ON faw.actor_id = a.actor_id
+             JOIN {$this->characters_table} c ON faw.character_id = c.character_id
+             JOIN {$this->watches_table} w ON faw.watch_id = w.watch_id
+             JOIN {$this->brands_table} b ON w.brand_id = b.brand_id
+             WHERE f.title LIKE %s
+             ORDER BY a.actor_name",
+            '%' . $this->wpdb->esc_like($film_title) . '%'
+        ), ARRAY_A);
 
         $watches = array();
         foreach ($results as $row) {
@@ -474,36 +452,24 @@ class FWD_Database {
      * Get database statistics
      */
     public function get_stats() {
-        if (!$this->is_connected()) {
-            return array('success' => false, 'error' => 'Database not connected', 'stats' => array(
-                'films' => 0, 'actors' => 0, 'brands' => 0, 'entries' => 0, 'top_brands' => array()
-            ));
-        }
+        $film_count = $this->wpdb->get_var("SELECT COUNT(*) FROM {$this->films_table}");
+        $actor_count = $this->wpdb->get_var("SELECT COUNT(*) FROM {$this->actors_table}");
+        $brand_count = $this->wpdb->get_var("SELECT COUNT(*) FROM {$this->brands_table}");
+        $entry_count = $this->wpdb->get_var("SELECT COUNT(*) FROM {$this->film_actor_watch_table}");
 
-        $stmt = $this->db->query("SELECT COUNT(*) FROM films");
-        $film_count = $stmt->fetchColumn();
-
-        $stmt = $this->db->query("SELECT COUNT(*) FROM actors");
-        $actor_count = $stmt->fetchColumn();
-
-        $stmt = $this->db->query("SELECT COUNT(*) FROM brands");
-        $brand_count = $stmt->fetchColumn();
-
-        $stmt = $this->db->query("SELECT COUNT(*) FROM film_actor_watch");
-        $entry_count = $stmt->fetchColumn();
-
-        $stmt = $this->db->query("
-            SELECT b.brand_name, COUNT(*) as count
-            FROM film_actor_watch faw
-            JOIN watches w ON faw.watch_id = w.watch_id
-            JOIN brands b ON w.brand_id = b.brand_id
-            GROUP BY b.brand_name
-            ORDER BY count DESC
-            LIMIT 10
-        ");
+        $top_brands_results = $this->wpdb->get_results(
+            "SELECT b.brand_name, COUNT(*) as count
+             FROM {$this->film_actor_watch_table} faw
+             JOIN {$this->watches_table} w ON faw.watch_id = w.watch_id
+             JOIN {$this->brands_table} b ON w.brand_id = b.brand_id
+             GROUP BY b.brand_name
+             ORDER BY count DESC
+             LIMIT 10",
+            ARRAY_A
+        );
 
         $top_brands = array();
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        foreach ($top_brands_results as $row) {
             $top_brands[] = array(
                 'brand' => $row['brand_name'],
                 'count' => $row['count']
@@ -523,10 +489,23 @@ class FWD_Database {
     }
 
     /**
-     * Get database path for admin display
+     * Get database info for admin display
      */
-    public function get_db_path() {
-        return $this->db_path;
+    public function get_db_info() {
+        return array(
+            'type' => 'MySQL',
+            'host' => DB_HOST,
+            'name' => DB_NAME,
+            'prefix' => $this->table_prefix,
+            'tables' => array(
+                $this->films_table,
+                $this->brands_table,
+                $this->watches_table,
+                $this->actors_table,
+                $this->characters_table,
+                $this->film_actor_watch_table
+            )
+        );
     }
 }
 

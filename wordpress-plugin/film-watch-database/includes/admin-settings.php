@@ -31,11 +31,9 @@ function fwd_settings_page() {
         wp_die('You do not have sufficient permissions to access this page.');
     }
 
-    // Get database stats
+    // Get database stats and info
     $stats = fwd_get_stats();
-    $db_path = fwd_db()->get_db_path();
-    $db_exists = file_exists($db_path);
-    $db_size = $db_exists ? size_format(filesize($db_path), 2) : 'N/A';
+    $db_info = fwd_db()->get_db_info();
 
     ?>
     <div class="wrap">
@@ -43,28 +41,37 @@ function fwd_settings_page() {
 
         <div class="fwd-admin-status" style="margin: 20px 0; padding: 15px; border-left: 4px solid #46b450; background: #ecf7ed;">
             <strong>Status:</strong>
-            <span style="color: #46b450;">✓ WordPress-Native PHP Backend</span>
+            <span style="color: #46b450;">✓ WordPress-Native MySQL Backend</span>
             <p style="margin: 10px 0 0 0;">
-                No external Flask server required! The database runs natively in WordPress using PHP and SQLite.
+                No external Flask server or SQLite extension required! The database uses WordPress's native MySQL connection.
             </p>
         </div>
 
         <h2>Database Information</h2>
         <table class="form-table">
             <tr>
-                <th scope="row">Database Location</th>
-                <td>
-                    <code><?php echo esc_html($db_path); ?></code>
-                    <?php if ($db_exists): ?>
-                        <span style="color: #46b450;">✓ Database file exists</span>
-                    <?php else: ?>
-                        <span style="color: #dc3232;">✗ Database file not found</span>
-                    <?php endif; ?>
-                </td>
+                <th scope="row">Database Type</th>
+                <td><strong><?php echo esc_html($db_info['type']); ?></strong></td>
             </tr>
             <tr>
-                <th scope="row">Database Size</th>
-                <td><?php echo esc_html($db_size); ?></td>
+                <th scope="row">Database Host</th>
+                <td><code><?php echo esc_html($db_info['host']); ?></code></td>
+            </tr>
+            <tr>
+                <th scope="row">Database Name</th>
+                <td><code><?php echo esc_html($db_info['name']); ?></code></td>
+            </tr>
+            <tr>
+                <th scope="row">Table Prefix</th>
+                <td><code><?php echo esc_html($db_info['prefix']); ?></code></td>
+            </tr>
+            <tr>
+                <th scope="row">Plugin Tables</th>
+                <td>
+                    <?php foreach ($db_info['tables'] as $table): ?>
+                        <code><?php echo esc_html($table); ?></code><br>
+                    <?php endforeach; ?>
+                </td>
             </tr>
             <?php if (isset($stats['stats'])): ?>
             <tr>
@@ -139,19 +146,6 @@ function fwd_settings_page() {
 
         <hr>
 
-        <h2>Import Existing Database</h2>
-        <div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #2271b1;">
-            <p>If you have an existing <code>film_watches.db</code> from your Flask application, you can import it:</p>
-            <ol>
-                <li>Copy your existing database file to: <code><?php echo esc_html(dirname($db_path)); ?>/</code></li>
-                <li>Rename it to: <code>film_watches.db</code></li>
-                <li>Refresh this page to see updated statistics</li>
-            </ol>
-            <p><strong>Note:</strong> The plugin will automatically create a new empty database if none exists.</p>
-        </div>
-
-        <hr>
-
         <h2>System Requirements</h2>
         <div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #2271b1;">
             <table class="form-table">
@@ -167,37 +161,22 @@ function fwd_settings_page() {
                     </td>
                 </tr>
                 <tr>
-                    <th scope="row">PDO Extension</th>
+                    <th scope="row">WordPress Database</th>
                     <td>
-                        <?php if (extension_loaded('pdo')): ?>
-                            <span style="color: #46b450;">✓ Enabled</span>
+                        <?php global $wpdb; ?>
+                        <?php if ($wpdb && $wpdb->db_server_info()): ?>
+                            <span style="color: #46b450;">✓ Connected</span>
+                            <br><small><?php echo esc_html($wpdb->db_server_info()); ?></small>
                         <?php else: ?>
-                            <span style="color: #dc3232;">✗ Required</span>
+                            <span style="color: #dc3232;">✗ Not connected</span>
                         <?php endif; ?>
                     </td>
                 </tr>
                 <tr>
-                    <th scope="row">PDO SQLite Driver</th>
+                    <th scope="row">MySQL/MariaDB</th>
                     <td>
-                        <?php if (extension_loaded('pdo_sqlite')): ?>
-                            <span style="color: #46b450;">✓ Enabled</span>
-                        <?php else: ?>
-                            <span style="color: #dc3232;">✗ Required</span>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">Uploads Directory Writable</th>
-                    <td>
-                        <?php
-                        $upload_dir = wp_upload_dir();
-                        $is_writable = is_writable($upload_dir['basedir']);
-                        ?>
-                        <?php if ($is_writable): ?>
-                            <span style="color: #46b450;">✓ Writable</span>
-                        <?php else: ?>
-                            <span style="color: #dc3232;">✗ Not writable</span>
-                        <?php endif; ?>
+                        <span style="color: #46b450;">✓ Using WordPress Database</span>
+                        <br><small>No additional database drivers needed</small>
                     </td>
                 </tr>
             </table>
