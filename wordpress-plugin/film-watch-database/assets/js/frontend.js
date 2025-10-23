@@ -1,0 +1,253 @@
+/**
+ * Film Watch Database - Frontend JavaScript
+ */
+
+(function($) {
+    'use strict';
+
+    /**
+     * Initialize search functionality
+     */
+    function initSearch() {
+        const searchBtn = document.getElementById('fwd-search-btn');
+        const searchInput = document.getElementById('fwd-search-input');
+
+        if (!searchBtn || !searchInput) return;
+
+        // Search on button click
+        searchBtn.addEventListener('click', performSearch);
+
+        // Search on Enter key
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                performSearch();
+            }
+        });
+    }
+
+    /**
+     * Perform search via AJAX
+     */
+    function performSearch() {
+        const searchType = document.getElementById('fwd-search-type');
+        const searchInput = document.getElementById('fwd-search-input');
+        const resultsContainer = document.getElementById('fwd-search-results');
+        const searchBtn = document.getElementById('fwd-search-btn');
+
+        if (!searchType || !searchInput || !resultsContainer) return;
+
+        const queryType = searchType.value;
+        const searchTerm = searchInput.value.trim();
+
+        if (!searchTerm) {
+            resultsContainer.innerHTML = '<div class="fwd-error">Please enter a search term.</div>';
+            return;
+        }
+
+        // Show loading state
+        searchBtn.disabled = true;
+        searchBtn.textContent = 'Searching...';
+        resultsContainer.innerHTML = '<div class="fwd-loading">Searching database...</div>';
+
+        // Make AJAX request
+        $.ajax({
+            url: fwdAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'fwd_search',
+                nonce: fwdAjax.nonce,
+                query_type: queryType,
+                search_term: searchTerm
+            },
+            success: function(response) {
+                if (response.success) {
+                    displayResults(response.data, queryType, resultsContainer);
+                } else {
+                    resultsContainer.innerHTML = '<div class="fwd-error">Error: ' +
+                        (response.data.error || 'Unknown error occurred') + '</div>';
+                }
+            },
+            error: function(xhr, status, error) {
+                resultsContainer.innerHTML = '<div class="fwd-error">Network error: ' + error + '</div>';
+            },
+            complete: function() {
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'Search';
+            }
+        });
+    }
+
+    /**
+     * Display search results
+     */
+    function displayResults(data, queryType, container) {
+        if (data.count === 0) {
+            container.innerHTML = '<div class="fwd-no-results">No results found.</div>';
+            return;
+        }
+
+        let html = '<div class="fwd-success">Found ' + data.count + ' result(s)</div>';
+        html += '<div class="fwd-items-list">';
+
+        if (queryType === 'actor' && data.films) {
+            data.films.forEach(function(film) {
+                html += buildActorResultHTML(film);
+            });
+        } else if (queryType === 'brand' && data.films) {
+            data.films.forEach(function(film) {
+                html += buildBrandResultHTML(film);
+            });
+        } else if (queryType === 'film' && data.watches) {
+            data.watches.forEach(function(watch) {
+                html += buildFilmResultHTML(watch);
+            });
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    /**
+     * Build HTML for actor search result
+     */
+    function buildActorResultHTML(film) {
+        return `
+            <div class="fwd-item">
+                <div class="fwd-item-title">${escapeHtml(film.title)} (${escapeHtml(film.year)})</div>
+                <div class="fwd-item-details">
+                    <strong>Character:</strong> ${escapeHtml(film.character)}<br>
+                    <strong>Watch:</strong> ${escapeHtml(film.brand)} ${escapeHtml(film.model)}<br>
+                    <strong>Role:</strong> ${escapeHtml(film.narrative)}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Build HTML for brand search result
+     */
+    function buildBrandResultHTML(film) {
+        return `
+            <div class="fwd-item">
+                <div class="fwd-item-title">${escapeHtml(film.title)} (${escapeHtml(film.year)})</div>
+                <div class="fwd-item-details">
+                    <strong>Actor:</strong> ${escapeHtml(film.actor)} as ${escapeHtml(film.character)}<br>
+                    <strong>Watch:</strong> ${escapeHtml(film.model)}<br>
+                    <strong>Role:</strong> ${escapeHtml(film.narrative)}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Build HTML for film search result
+     */
+    function buildFilmResultHTML(watch) {
+        return `
+            <div class="fwd-item">
+                <div class="fwd-item-title">${escapeHtml(watch.actor)} as ${escapeHtml(watch.character)}</div>
+                <div class="fwd-item-details">
+                    <strong>Watch:</strong> ${escapeHtml(watch.brand)} ${escapeHtml(watch.model)}<br>
+                    <strong>Role:</strong> ${escapeHtml(watch.narrative)}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Initialize add entry form
+     */
+    function initAddForm() {
+        const addBtn = document.getElementById('fwd-add-btn');
+
+        if (!addBtn) return;
+
+        addBtn.addEventListener('click', addEntry);
+    }
+
+    /**
+     * Add new entry via AJAX
+     */
+    function addEntry() {
+        const entryText = document.getElementById('fwd-entry-text');
+        const narrative = document.getElementById('fwd-narrative');
+        const resultDiv = document.getElementById('fwd-add-result');
+        const addBtn = document.getElementById('fwd-add-btn');
+
+        if (!entryText || !narrative || !resultDiv) return;
+
+        const entryValue = entryText.value.trim();
+        const narrativeValue = narrative.value.trim();
+
+        if (!entryValue) {
+            showResult(resultDiv, 'fwd-error', 'Please enter an entry text.');
+            return;
+        }
+
+        // Show loading state
+        addBtn.disabled = true;
+        addBtn.textContent = 'Adding...';
+        showResult(resultDiv, 'fwd-loading', 'Adding entry to database...');
+
+        // Make AJAX request
+        $.ajax({
+            url: fwdAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'fwd_add_entry',
+                nonce: fwdAjax.nonce,
+                entry_text: entryValue,
+                narrative: narrativeValue
+            },
+            success: function(response) {
+                if (response.success) {
+                    showResult(resultDiv, 'fwd-success', '✓ ' + response.data.message);
+                    entryText.value = '';
+                    narrative.value = '';
+                } else {
+                    showResult(resultDiv, 'fwd-error', 'Error: ' +
+                        (response.data.error || 'Unknown error occurred'));
+                }
+            },
+            error: function(xhr, status, error) {
+                showResult(resultDiv, 'fwd-error', 'Network error: ' + error);
+            },
+            complete: function() {
+                addBtn.disabled = false;
+                addBtn.textContent = 'Add to Database';
+            }
+        });
+    }
+
+    /**
+     * Show result message
+     */
+    function showResult(element, className, message) {
+        element.className = 'fwd-result show ' + className;
+        element.textContent = message;
+    }
+
+    /**
+     * Escape HTML to prevent XSS
+     */
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
+    /**
+     * Initialize on document ready
+     */
+    $(document).ready(function() {
+        initSearch();
+        initAddForm();
+    });
+
+})(jQuery);
