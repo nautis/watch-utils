@@ -273,7 +273,6 @@ function fwd_add_shortcode($atts) {
             <strong>Examples:</strong><br>
             • "Jakob Cedergren wears a Citizen Eco-Drive Divers 200M in The Guilty (2018)"<br>
             • "Tom Cruise wore a Breitling Navitimer in Top Gun: Maverick (2022)"<br>
-            • "Matthew Clapp wore Rolex Yacht-Master in the movie Pizza with Matt (2025)"<br>
             • "In Interstellar (2014), Matthew McConaughey as Cooper wears Hamilton Khaki Pilot"
         </div>
 
