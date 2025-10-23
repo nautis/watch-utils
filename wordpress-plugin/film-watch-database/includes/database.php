@@ -105,7 +105,7 @@ class FWD_Database {
             narrative_role text,
             source_url varchar(500) DEFAULT NULL,
             PRIMARY KEY (faw_id),
-            UNIQUE KEY film_actor_char_watch (film_id, actor_id, character_id, watch_id),
+            UNIQUE KEY film_actor (film_id, actor_id),
             KEY film_id (film_id),
             KEY actor_id (actor_id),
             KEY character_id (character_id),
@@ -134,6 +134,31 @@ class FWD_Database {
             $this->wpdb->query(
                 "ALTER TABLE {$this->film_actor_watch_table}
                  ADD COLUMN source_url varchar(500) DEFAULT NULL AFTER narrative_role"
+            );
+        }
+
+        // Update unique constraint from film_actor_char_watch to film_actor
+        // This restricts to one watch per actor per film
+        $old_constraint = $this->wpdb->get_results(
+            "SHOW KEYS FROM {$this->film_actor_watch_table} WHERE Key_name = 'film_actor_char_watch'"
+        );
+
+        $new_constraint = $this->wpdb->get_results(
+            "SHOW KEYS FROM {$this->film_actor_watch_table} WHERE Key_name = 'film_actor'"
+        );
+
+        // If old constraint exists and new one doesn't, migrate
+        if (!empty($old_constraint) && empty($new_constraint)) {
+            // Drop the old constraint
+            $this->wpdb->query(
+                "ALTER TABLE {$this->film_actor_watch_table}
+                 DROP INDEX film_actor_char_watch"
+            );
+
+            // Add the new constraint
+            $this->wpdb->query(
+                "ALTER TABLE {$this->film_actor_watch_table}
+                 ADD UNIQUE KEY film_actor (film_id, actor_id)"
             );
         }
     }
@@ -313,15 +338,15 @@ class FWD_Database {
             $data['brand'], $data['model']
         ));
 
-        // Check for duplicates
+        // Check for duplicates (one watch per actor per film)
         $existing = $this->wpdb->get_var($this->wpdb->prepare(
             "SELECT faw_id FROM {$this->film_actor_watch_table}
-             WHERE film_id = %d AND actor_id = %d AND watch_id = %d",
-            $film_id, $actor_id, $watch_id
+             WHERE film_id = %d AND actor_id = %d",
+            $film_id, $actor_id
         ));
 
         if ($existing) {
-            throw new Exception("Duplicate entry: {$data['actor']} wearing {$data['brand']} {$data['model']} in {$data['title']} already exists in the database.");
+            throw new Exception("Duplicate entry: {$data['actor']} already has a watch entry in {$data['title']}. Each actor can only have one watch per film.");
         }
 
         // Check if character exists
@@ -355,11 +380,19 @@ class FWD_Database {
             $format[] = '%s';
         }
 
-        $this->wpdb->insert(
+        $result = $this->wpdb->insert(
             $this->film_actor_watch_table,
             $insert_data,
             $format
         );
+
+        if ($result === false) {
+            // Check if it's a duplicate key error
+            if (strpos($this->wpdb->last_error, 'Duplicate entry') !== false) {
+                throw new Exception("Duplicate entry: {$data['actor']} already has a watch entry in {$data['title']}. Each actor can only have one watch per film.");
+            }
+            throw new Exception("Database error: " . $this->wpdb->last_error);
+        }
 
         return true;
     }
