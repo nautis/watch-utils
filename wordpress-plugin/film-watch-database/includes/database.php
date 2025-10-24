@@ -172,13 +172,13 @@ class FWD_Database {
         $text = rtrim($text, '.');
 
         // Pattern 1: "Actor wears/wore Brand Model in Year Film"
-        $pattern1 = '/(.+?)\s+(?:wears?|wearing|wore)\s+(?:a|an\s+)?(.+?)\s+(?:watch\s+)?in\s+(?:the\s+)?(?:movie\s+)?(\d{4})\s+(?:\w+\s+)?(.+?)$/i';
+        $pattern1 = '/(.+?)\s+(?:wears?|wearing|wore)\s+(?:an?\s+)?(.+?)\s+(?:watch\s+)?in\s+(?:the\s+)?(?:movie\s+)?(\d{4})\s+(?:\w+\s+)?(.+?)$/i';
 
         // Pattern 2: "Actor wears/wore Brand Model in Film (Year)"
-        $pattern2 = '/(.+?)\s+(?:wears?|wearing|wore)\s+(?:a|an\s+)?(.+?)\s+in\s+(?:the\s+)?(?:movie\s+)?(.+?)\s+\((\d{4})\)$/i';
+        $pattern2 = '/(.+?)\s+(?:wears?|wearing|wore)\s+(?:an?\s+)?(.+?)\s+in\s+(?:the\s+)?(?:movie\s+)?(.+?)\s+\((\d{4})\)$/i';
 
         // Pattern 3: "In Film (Year), Actor as Character wears/wore Brand Model"
-        $pattern3 = '/In\s+(.+?)\s+\((\d{4})\),\s+(.+?)\s+(?:as|plays)\s+(.+?)\s+(?:wears?|wearing|wore)\s+(?:a|an\s+)?(.+?)$/i';
+        $pattern3 = '/In\s+(.+?)\s+\((\d{4})\),\s+(.+?)\s+(?:as|plays)\s+(.+?)\s+(?:wears?|wearing|wore)\s+(?:an?\s+)?(.+?)$/i';
 
         $actor = null;
         $watch_full = null;
