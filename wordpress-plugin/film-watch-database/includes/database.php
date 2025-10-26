@@ -268,10 +268,17 @@ class FWD_Database {
             }
         }
 
-        // Default character to actor's last name if not provided
+        // Extract character from "Actor as Character" pattern if not already set
         if (!$character) {
-            $name_parts = explode(' ', $actor);
-            $character = end($name_parts);
+            // Check if actor string contains "as" or "plays"
+            if (preg_match('/(.+?)\s+(?:as|plays)\s+(.+)$/i', $actor, $char_match)) {
+                $actor = trim($char_match[1]);
+                $character = trim($char_match[2]);
+            } else {
+                // Default character to actor's last name if not provided
+                $name_parts = explode(' ', $actor);
+                $character = end($name_parts);
+            }
         }
 
         return array(
