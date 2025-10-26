@@ -221,6 +221,9 @@
                     entryText.value = '';
                     narrative.value = '';
                     if (sourceUrl) sourceUrl.value = '';
+                } else if (response.data && response.data.duplicate) {
+                    // Show duplicate comparison UI
+                    showDuplicateComparison(resultDiv, response.data, entryValue, narrativeValue, sourceUrlValue);
                 } else {
                     showResult(resultDiv, 'fwd-error', 'Error: ' +
                         (response.data.error || 'Unknown error occurred'));
@@ -242,6 +245,105 @@
     function showResult(element, className, message) {
         element.className = 'fwd-result show ' + className;
         element.textContent = message;
+    }
+
+    /**
+     * Show duplicate comparison UI
+     */
+    function showDuplicateComparison(element, data, entryText, narrative, sourceUrl) {
+        const existing = data.existing;
+        const newEntry = data.new;
+
+        let html = '<div class="fwd-duplicate-warning">';
+        html += '<h4>⚠️ Duplicate Entry Detected</h4>';
+        html += '<p>' + escapeHtml(data.error) + '</p>';
+        html += '<div class="fwd-comparison">';
+
+        // Existing entry
+        html += '<div class="fwd-existing-entry">';
+        html += '<h5>Current Entry:</h5>';
+        html += '<strong>Watch:</strong> ' + escapeHtml(existing.brand) + ' ' + escapeHtml(existing.model) + '<br>';
+        html += '<strong>Character:</strong> ' + escapeHtml(existing.character) + '<br>';
+        if (existing.narrative) {
+            html += '<strong>Narrative:</strong> ' + escapeHtml(existing.narrative) + '<br>';
+        }
+        if (existing.source_url) {
+            html += '<strong>Source:</strong> <a href="' + escapeHtml(existing.source_url) + '" target="_blank">View</a><br>';
+        }
+        html += '</div>';
+
+        // New entry
+        html += '<div class="fwd-new-entry">';
+        html += '<h5>New Entry:</h5>';
+        html += '<strong>Watch:</strong> ' + escapeHtml(newEntry.brand) + ' ' + escapeHtml(newEntry.model) + '<br>';
+        html += '<strong>Character:</strong> ' + escapeHtml(newEntry.character) + '<br>';
+        if (narrative) {
+            html += '<strong>Narrative:</strong> ' + escapeHtml(narrative) + '<br>';
+        }
+        if (sourceUrl) {
+            html += '<strong>Source:</strong> <a href="' + escapeHtml(sourceUrl) + '" target="_blank">View</a><br>';
+        }
+        html += '</div>';
+
+        html += '</div>'; // end comparison
+        html += '<div class="fwd-duplicate-actions">';
+        html += '<button id="fwd-update-btn" class="fwd-button fwd-button-update" data-faw-id="' + existing.faw_id + '" data-entry-text="' + escapeHtml(entryText) + '" data-narrative="' + escapeHtml(narrative) + '" data-source-url="' + escapeHtml(sourceUrl) + '">Update with New Entry</button>';
+        html += '<button id="fwd-cancel-btn" class="fwd-button fwd-button-secondary">Cancel</button>';
+        html += '</div>';
+        html += '</div>';
+
+        element.className = 'fwd-result show';
+        element.innerHTML = html;
+
+        // Attach event handlers
+        document.getElementById('fwd-update-btn').addEventListener('click', handleUpdate);
+        document.getElementById('fwd-cancel-btn').addEventListener('click', function() {
+            element.innerHTML = '';
+            element.className = 'fwd-result';
+        });
+    }
+
+    /**
+     * Handle update entry
+     */
+    function handleUpdate(e) {
+        const btn = e.target;
+        const fawId = btn.getAttribute('data-faw-id');
+        const entryText = btn.getAttribute('data-entry-text');
+        const narrative = btn.getAttribute('data-narrative');
+        const sourceUrl = btn.getAttribute('data-source-url');
+        const resultDiv = document.getElementById('fwd-add-result');
+
+        btn.disabled = true;
+        btn.textContent = 'Updating...';
+
+        $.ajax({
+            url: fwdAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'fwd_update_entry',
+                nonce: fwdAjax.nonce,
+                faw_id: fawId,
+                entry_text: entryText,
+                narrative: narrative,
+                source_url: sourceUrl
+            },
+            success: function(response) {
+                if (response.success) {
+                    showResult(resultDiv, 'fwd-success', '✓ ' + response.data.message);
+                    // Clear form fields
+                    document.getElementById('fwd-entry-text').value = '';
+                    document.getElementById('fwd-narrative').value = '';
+                    const sourceUrlField = document.getElementById('fwd-source-url');
+                    if (sourceUrlField) sourceUrlField.value = '';
+                } else {
+                    showResult(resultDiv, 'fwd-error', 'Error: ' + (response.data.error || 'Unknown error occurred'));
+                }
+            },
+            error: function(xhr, status, error) {
+                showResult(resultDiv, 'fwd-error', 'Network error: ' + error);
+            }
+        });
     }
 
     /**

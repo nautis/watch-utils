@@ -61,6 +61,48 @@ function fwd_add_entry($entry_text, $narrative = '', $source_url = '') {
             'data' => $parsed
         );
     } catch (Exception $e) {
+        // Check if this is a duplicate entry with existing data
+        if ($e->getMessage() === 'duplicate' && isset($e->existing_data)) {
+            return array(
+                'success' => false,
+                'duplicate' => true,
+                'error' => "This actor already has a watch entry in this film.",
+                'existing' => $e->existing_data,
+                'new' => $parsed
+            );
+        }
+
+        return array(
+            'success' => false,
+            'error' => $e->getMessage()
+        );
+    }
+}
+
+/**
+ * Update existing entry in database
+ */
+function fwd_update_entry($faw_id, $entry_text, $narrative = '', $source_url = '') {
+    try {
+        $db = fwd_db();
+        $parsed = $db->parse_entry($entry_text);
+
+        if ($narrative) {
+            $parsed['narrative'] = $narrative;
+        }
+
+        if ($source_url) {
+            $parsed['source_url'] = $source_url;
+        }
+
+        $db->update_entry($faw_id, $parsed);
+
+        return array(
+            'success' => true,
+            'message' => "Successfully updated: {$parsed['actor']} wearing {$parsed['brand']} {$parsed['model']} in {$parsed['title']} ({$parsed['year']})",
+            'data' => $parsed
+        );
+    } catch (Exception $e) {
         return array(
             'success' => false,
             'error' => $e->getMessage()
@@ -132,3 +174,32 @@ function fwd_ajax_add_entry() {
     }
 }
 add_action('wp_ajax_fwd_add_entry', 'fwd_ajax_add_entry');
+
+/**
+ * AJAX handler for updating entries (admin only)
+ */
+function fwd_ajax_update_entry() {
+    check_ajax_referer('fwd_ajax_nonce', 'nonce');
+
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(array('message' => 'Unauthorized'));
+    }
+
+    $faw_id = intval($_POST['faw_id']);
+    $entry_text = sanitize_text_field($_POST['entry_text']);
+    $narrative = sanitize_textarea_field($_POST['narrative']);
+    $source_url = !empty($_POST['source_url']) ? esc_url_raw($_POST['source_url']) : '';
+
+    if (empty($faw_id) || empty($entry_text)) {
+        wp_send_json_error(array('message' => 'Entry ID and text are required'));
+    }
+
+    $result = fwd_update_entry($faw_id, $entry_text, $narrative, $source_url);
+
+    if (isset($result['success']) && $result['success']) {
+        wp_send_json_success($result);
+    } else {
+        wp_send_json_error($result);
+    }
+}
+add_action('wp_ajax_fwd_update_entry', 'fwd_ajax_update_entry');
