@@ -287,7 +287,7 @@
 
         html += '</div>'; // end comparison
         html += '<div class="fwd-duplicate-actions">';
-        html += '<button id="fwd-update-btn" class="fwd-button fwd-button-update" data-faw-id="' + existing.faw_id + '" data-entry-text="' + escapeHtml(entryText) + '" data-narrative="' + escapeHtml(narrative) + '" data-source-url="' + escapeHtml(sourceUrl) + '">Update with New Entry</button>';
+        html += '<button id="fwd-update-btn" class="fwd-button fwd-button-update" data-faw-id="' + existing.faw_id + '">Update with New Entry</button>';
         html += '<button id="fwd-cancel-btn" class="fwd-button fwd-button-secondary">Cancel</button>';
         html += '</div>';
         html += '</div>';
@@ -295,11 +295,19 @@
         element.className = 'fwd-result show';
         element.innerHTML = html;
 
+        // Store the form values for later use (avoid escaping issues with data attributes)
+        element.dataset.pendingEntryText = entryText;
+        element.dataset.pendingNarrative = narrative;
+        element.dataset.pendingSourceUrl = sourceUrl;
+
         // Attach event handlers
         document.getElementById('fwd-update-btn').addEventListener('click', handleUpdate);
         document.getElementById('fwd-cancel-btn').addEventListener('click', function() {
             element.innerHTML = '';
             element.className = 'fwd-result';
+            delete element.dataset.pendingEntryText;
+            delete element.dataset.pendingNarrative;
+            delete element.dataset.pendingSourceUrl;
         });
     }
 
@@ -309,10 +317,10 @@
     function handleUpdate(e) {
         const btn = e.target;
         const fawId = btn.getAttribute('data-faw-id');
-        const entryText = btn.getAttribute('data-entry-text');
-        const narrative = btn.getAttribute('data-narrative');
-        const sourceUrl = btn.getAttribute('data-source-url');
         const resultDiv = document.getElementById('fwd-add-result');
+        const entryText = resultDiv.dataset.pendingEntryText;
+        const narrative = resultDiv.dataset.pendingNarrative;
+        const sourceUrl = resultDiv.dataset.pendingSourceUrl;
 
         btn.disabled = true;
         btn.textContent = 'Updating...';

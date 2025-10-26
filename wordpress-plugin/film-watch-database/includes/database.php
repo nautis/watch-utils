@@ -408,7 +408,32 @@ class FWD_Database {
         if ($result === false) {
             // Check if it's a duplicate key error
             if (strpos($this->wpdb->last_error, 'Duplicate entry') !== false) {
-                throw new Exception("Duplicate entry: {$data['actor']} already has a watch entry in {$data['title']}. Each actor can only have one watch per film.");
+                // Fetch the existing entry to return for comparison
+                $existing = $this->wpdb->get_row($this->wpdb->prepare(
+                    "SELECT faw.*, f.title, f.year, a.actor_name, b.brand_name, w.model_reference, c.character_name
+                     FROM {$this->film_actor_watch_table} faw
+                     JOIN {$this->films_table} f ON faw.film_id = f.film_id
+                     JOIN {$this->actors_table} a ON faw.actor_id = a.actor_id
+                     JOIN {$this->brands_table} b ON b.brand_id = (SELECT brand_id FROM {$this->watches_table} WHERE watch_id = faw.watch_id)
+                     JOIN {$this->watches_table} w ON faw.watch_id = w.watch_id
+                     JOIN {$this->characters_table} c ON faw.character_id = c.character_id
+                     WHERE faw.film_id = %d AND faw.actor_id = %d",
+                    $film_id, $actor_id
+                ), ARRAY_A);
+
+                $exception = new Exception("duplicate");
+                $exception->existing_data = array(
+                    'faw_id' => $existing['faw_id'],
+                    'actor' => $existing['actor_name'],
+                    'title' => $existing['title'],
+                    'year' => $existing['year'],
+                    'brand' => $existing['brand_name'],
+                    'model' => $existing['model_reference'],
+                    'character' => $existing['character_name'],
+                    'narrative' => $existing['narrative_role'],
+                    'source_url' => $existing['source_url']
+                );
+                throw $exception;
             }
             throw new Exception("Database error: " . $this->wpdb->last_error);
         }
