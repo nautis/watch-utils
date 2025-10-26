@@ -359,17 +359,17 @@ class FWD_Database {
         ), ARRAY_A);
 
         if ($existing) {
-            // Return the existing entry for potential update
+            // Return the existing entry for potential update (strip slashes from text fields)
             $exception = new Exception("duplicate");
             $exception->existing_data = array(
                 'faw_id' => $existing['faw_id'],
-                'actor' => $existing['actor_name'],
-                'title' => $existing['title'],
+                'actor' => stripslashes($existing['actor_name']),
+                'title' => stripslashes($existing['title']),
                 'year' => $existing['year'],
-                'brand' => $existing['brand_name'],
-                'model' => $existing['model_reference'],
-                'character' => $existing['character_name'],
-                'narrative' => $existing['narrative_role'],
+                'brand' => stripslashes($existing['brand_name']),
+                'model' => stripslashes($existing['model_reference']),
+                'character' => stripslashes($existing['character_name']),
+                'narrative' => stripslashes($existing['narrative_role']),
                 'source_url' => $existing['source_url']
             );
             throw $exception;
@@ -431,13 +431,13 @@ class FWD_Database {
                 $exception = new Exception("duplicate");
                 $exception->existing_data = array(
                     'faw_id' => $existing['faw_id'],
-                    'actor' => $existing['actor_name'],
-                    'title' => $existing['title'],
+                    'actor' => stripslashes($existing['actor_name']),
+                    'title' => stripslashes($existing['title']),
                     'year' => $existing['year'],
-                    'brand' => $existing['brand_name'],
-                    'model' => $existing['model_reference'],
-                    'character' => $existing['character_name'],
-                    'narrative' => $existing['narrative_role'],
+                    'brand' => stripslashes($existing['brand_name']),
+                    'model' => stripslashes($existing['model_reference']),
+                    'character' => stripslashes($existing['character_name']),
+                    'narrative' => stripslashes($existing['narrative_role']),
                     'source_url' => $existing['source_url']
                 );
                 throw $exception;
@@ -548,12 +548,12 @@ class FWD_Database {
         $films = array();
         foreach ($results as $row) {
             $films[] = array(
-                'title' => $row['title'],
+                'title' => stripslashes($row['title']),
                 'year' => $row['year'],
-                'brand' => $row['brand_name'],
-                'model' => $row['model_reference'],
-                'character' => $row['character_name'],
-                'narrative' => $row['narrative_role'],
+                'brand' => stripslashes($row['brand_name']),
+                'model' => stripslashes($row['model_reference']),
+                'character' => stripslashes($row['character_name']),
+                'narrative' => stripslashes($row['narrative_role']),
                 'source_url' => $row['source_url']
             );
         }
@@ -587,12 +587,12 @@ class FWD_Database {
         $films = array();
         foreach ($results as $row) {
             $films[] = array(
-                'title' => $row['title'],
+                'title' => stripslashes($row['title']),
                 'year' => $row['year'],
-                'actor' => $row['actor_name'],
-                'model' => $row['model_reference'],
-                'character' => $row['character_name'],
-                'narrative' => $row['narrative_role'],
+                'actor' => stripslashes($row['actor_name']),
+                'model' => stripslashes($row['model_reference']),
+                'character' => stripslashes($row['character_name']),
+                'narrative' => stripslashes($row['narrative_role']),
                 'source_url' => $row['source_url']
             );
         }
@@ -626,13 +626,13 @@ class FWD_Database {
         $watches = array();
         foreach ($results as $row) {
             $watches[] = array(
-                'title' => $row['title'],
+                'title' => stripslashes($row['title']),
                 'year' => $row['year'],
-                'actor' => $row['actor_name'],
-                'brand' => $row['brand_name'],
-                'model' => $row['model_reference'],
-                'character' => $row['character_name'],
-                'narrative' => $row['narrative_role'],
+                'actor' => stripslashes($row['actor_name']),
+                'brand' => stripslashes($row['brand_name']),
+                'model' => stripslashes($row['model_reference']),
+                'character' => stripslashes($row['character_name']),
+                'narrative' => stripslashes($row['narrative_role']),
                 'source_url' => $row['source_url']
             );
         }
